@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" />
+    <!-- Applies the theme before first paint so there is no light→dark flash.
+         Mirrors src/lib/theme.ts; keep the two in sync. -->
+    <script>
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('theme')
+          var theme =
+            stored === 'light' || stored === 'dark'
+              ? stored
+              : matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light'
+          document.documentElement.classList.toggle('dark', theme === 'dark')
+          document
+            .querySelector('meta[name="theme-color"]')
+            .setAttribute('content', theme === 'dark' ? '#0a0a0a' : '#ffffff')
+        } catch (_) {}
+      })()
+    </script>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Stylesheet is linked here (not imported from JS) so it is render-blocking
+         in dev too — importing it from App.tsx made Vite inject it after the
+         module graph loaded, painting unstyled SSR HTML first. -->
+    <link rel="stylesheet" href="/src/styles/app.css" />
+    <title>Alt Tv Rewind</title>
+    <meta
+      name="description"
+      content="An SSR React starter — Express, React Router 7, tRPC, Prisma, better-auth, Tailwind." />
+    <meta property="og:title" content="Alt Tv Rewind" />
+    <meta
+      property="og:description"
+      content="An SSR React starter — Express, React Router 7, tRPC, Prisma, better-auth, Tailwind." />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <div id="app"><!--app-html--></div>
+    <!--app-state-->
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,10 @@
+[
+  {
+    "slug": "seinfeld",
+    "name": "Seinfeld",
+    "newsgroup": "alt.tv.seinfeld",
+    "tvmazeQuery": "seinfeld",
+    "tvmazeId": 530,
+    "liveWindowDays": 10
+  }
+]

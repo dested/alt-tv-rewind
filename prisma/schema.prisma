@@ -1,0 +1,357 @@
+// Prisma schema — https://pris.ly/d/prisma-schema
+//
+// better-auth models (User/Session/Account/Verification) keep better-auth's
+// required shape: camelCase fields, snake_case columns via @map. Auth only
+// gates the admin attribution-fixer; the site itself is public and read-only.
+//
+// Archive models are written by the ingest pipeline (`pipeline/`) with raw pg
+// batch inserts and read by tRPC procedures. Counter columns (`*Count`,
+// `usenetScore`, `controversy`) are denormalized by the `stats` stage.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────── auth (better-auth) ─────────────────────────
+
+model User {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false) @map("email_verified")
+  image         String?
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @map("updated_at")
+
+  sessions Session[]
+  accounts Account[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime @map("expires_at")
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @map("updated_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @default(now()) @map("updated_at")
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime  @map("expires_at")
+  createdAt  DateTime? @default(now()) @map("created_at")
+  updatedAt  DateTime? @default(now()) @map("updated_at")
+
+  @@map("verification")
+}
+
+// ───────────────────────── shows & episodes ─────────────────────────
+
+model Show {
+  id        Int       @id @default(autoincrement())
+  slug      String    @unique
+  name      String
+  tvmazeId  Int?      @unique @map("tvmaze_id")
+  premiered DateTime? @db.Date
+  ended     DateTime? @db.Date
+  network   String?
+  summary   String?
+  imageUrl  String?   @map("image_url")
+  // A thread started within this many days after an air date is "live" reaction.
+  liveWindowDays Int      @default(10) @map("live_window_days")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  seasons     Season[]
+  episodes    Episode[]
+  archives    Archive[]
+  threads     Thread[]
+  phrases     Phrase[]
+  dailyVolume DailyVolume[]
+
+  @@map("show")
+}
+
+model Season {
+  id                Int       @id @default(autoincrement())
+  showId            Int       @map("show_id")
+  show              Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+  number            Int
+  premiered         DateTime? @db.Date
+  ended             DateTime? @db.Date
+  episodeCount      Int       @default(0) @map("episode_count")
+  liveMessageCount  Int       @default(0) @map("live_message_count")
+  retroMessageCount Int       @default(0) @map("retro_message_count")
+
+  episodes Episode[]
+
+  @@unique([showId, number])
+  @@map("season")
+}
+
+model Episode {
+  id           Int       @id @default(autoincrement())
+  showId       Int       @map("show_id")
+  show         Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+  seasonId     Int       @map("season_id")
+  season       Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  seasonNumber Int       @map("season_number")
+  number       Int
+  slug         String // "s07e24-the-invitations"
+  title        String
+  airDate      DateTime  @db.Date @map("air_date")
+  airStamp     DateTime? @map("air_stamp") // TVMaze airstamp (zoned) — drives the hourly reaction curve
+  runtime      Int?
+  summary      String?
+  imageUrl     String?   @map("image_url")
+  tvmazeId     Int?      @map("tvmaze_id")
+  tvmazeRating Float?    @map("tvmaze_rating")
+
+  // stats stage
+  liveThreadCount   Int    @default(0) @map("live_thread_count")
+  liveMessageCount  Int    @default(0) @map("live_message_count")
+  livePosterCount   Int    @default(0) @map("live_poster_count")
+  retroThreadCount  Int    @default(0) @map("retro_thread_count")
+  retroMessageCount Int    @default(0) @map("retro_message_count")
+  usenetScore       Float? @map("usenet_score") // (loved+liked − hated−disliked) / rated live threads; null when < 3 rated
+
+  // recap stage
+  recap      String?
+  recapModel String? @map("recap_model")
+
+  threadEpisodes ThreadEpisode[]
+
+  @@unique([showId, slug])
+  @@unique([showId, seasonNumber, number])
+  @@map("episode")
+}
+
+// ───────────────────────── archive ─────────────────────────
+
+model Archive {
+  id           Int       @id @default(autoincrement())
+  showId       Int       @map("show_id")
+  show         Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+  newsgroup    String    @unique // "alt.tv.seinfeld"
+  sourceFile   String    @map("source_file")
+  messageCount Int       @default(0) @map("message_count")
+  threadCount  Int       @default(0) @map("thread_count")
+  spamCount    Int       @default(0) @map("spam_count")
+  firstPostAt  DateTime? @map("first_post_at")
+  lastPostAt   DateTime? @map("last_post_at")
+  ingestedAt   DateTime  @default(now()) @map("ingested_at")
+
+  threads  Thread[]
+  messages Message[]
+
+  @@map("archive")
+}
+
+// One row per distinct sender across all archives. `key` is a 16-hex sha256
+// prefix of the lowercased email (or "n:" + name when no address parses); the
+// address itself is never stored.
+model Poster {
+  id              Int       @id @default(autoincrement())
+  key             String    @unique
+  displayName     String    @map("display_name")
+  messageCount    Int       @default(0) @map("message_count")
+  threadCount     Int       @default(0) @map("thread_count") // threads started
+  predictionCount Int       @default(0) @map("prediction_count")
+  predictionHits  Int       @default(0) @map("prediction_hits")
+  firstPostAt     DateTime? @map("first_post_at")
+  lastPostAt      DateTime? @map("last_post_at")
+
+  messages Message[]
+
+  @@index([messageCount])
+  @@map("poster")
+}
+
+enum ThreadKind {
+  reaction
+  prediction
+  theory
+  question
+  trivia
+  quote
+  news
+  meta
+  offtopic
+  spam
+}
+
+enum Sentiment {
+  loved
+  liked
+  mixed
+  disliked
+  hated
+  neutral
+}
+
+enum PredictionOutcome {
+  came_true
+  did_not
+  unknown
+}
+
+enum EpisodeRelation {
+  live
+  retro
+}
+
+model Thread {
+  id            Int      @id @default(autoincrement())
+  showId        Int      @map("show_id")
+  show          Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  archiveId     Int      @map("archive_id")
+  archive       Archive  @relation(fields: [archiveId], references: [id], onDelete: Cascade)
+  rootMessageId Int?     @unique @map("root_message_id") // no FK: set after messages load
+  subject       String // normalized ("Re:" stripped)
+  startedAt     DateTime @map("started_at")
+  lastPostAt    DateTime @map("last_post_at")
+  messageCount  Int      @map("message_count")
+  posterCount   Int      @map("poster_count")
+  maxDepth      Int      @map("max_depth")
+  isSpam        Boolean  @default(false) @map("is_spam")
+
+  // classify stage (null until classified)
+  kind               ThreadKind?
+  sentiment          Sentiment?
+  hotTake            Boolean?           @map("hot_take")
+  controversy        Int                @default(0) // stats stage: 0 unless hotTake
+  summary            String?
+  pullQuote          String?            @map("pull_quote")
+  pullQuoteMessageId Int?               @map("pull_quote_message_id")
+  predictionClaim    String?            @map("prediction_claim")
+  predictionOutcome  PredictionOutcome? @map("prediction_outcome")
+  classifiedAt       DateTime?          @map("classified_at")
+  classifyModel      String?            @map("classify_model")
+
+  episodes ThreadEpisode[]
+  messages Message[]
+
+  @@index([showId, startedAt])
+  @@index([showId, messageCount])
+  @@index([showId, controversy])
+  @@index([showId, kind])
+  @@map("thread")
+}
+
+model ThreadEpisode {
+  threadId   Int             @map("thread_id")
+  thread     Thread          @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  episodeId  Int             @map("episode_id")
+  episode    Episode         @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  relation   EpisodeRelation
+  confidence Int // 0–100
+  method     String // "llm" | "heuristic" | "manual"
+  isPrimary  Boolean         @default(true) @map("is_primary")
+
+  @@id([threadId, episodeId])
+  @@index([episodeId, relation, confidence])
+  @@map("thread_episode")
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  archiveId Int      @map("archive_id")
+  archive   Archive  @relation(fields: [archiveId], references: [id], onDelete: Cascade)
+  threadId  Int      @map("thread_id")
+  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  posterId  Int      @map("poster_id")
+  poster    Poster   @relation(fields: [posterId], references: [id])
+  parentId  Int?     @map("parent_id") // resolved from parentRef after load; no FK (parents may be missing)
+  parentRef String?  @map("parent_ref") // RFC Message-ID of the parent
+  depth     Int      @default(0)
+  messageId String   @map("message_id") // RFC Message-ID
+  subject   String
+  postedAt  DateTime @map("posted_at")
+  body      String
+  lineCount Int      @default(0) @map("line_count")
+  isSpam    Boolean  @default(false) @map("is_spam")
+
+  // GENERATED ALWAYS AS to_tsvector('english', subject || ' ' || body) STORED
+  // + GIN index — both hand-written in the init migration (Prisma can't express them).
+  search Unsupported("tsvector")?
+
+  @@unique([archiveId, messageId])
+  @@index([threadId, postedAt])
+  @@index([posterId, postedAt])
+  @@index([archiveId, postedAt])
+  @@map("message")
+}
+
+// ───────────────────────── derived / stats ─────────────────────────
+
+model DailyVolume {
+  showId       Int      @map("show_id")
+  show         Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  day          DateTime @db.Date
+  messageCount Int      @map("message_count")
+  threadCount  Int      @map("thread_count")
+
+  @@id([showId, day])
+  @@map("daily_volume")
+}
+
+// Curated catchphrases per show (data/shows/<slug>/phrases.json), counted by
+// the stats stage. `pattern` is the regex source used for matching.
+model Phrase {
+  id             Int       @id @default(autoincrement())
+  showId         Int       @map("show_id")
+  show           Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
+  slug           String
+  label          String
+  pattern        String
+  episodeSlug    String?   @map("episode_slug") // episode that coined it, when known
+  firstMessageId Int?      @map("first_message_id")
+  firstAt        DateTime? @map("first_at")
+  totalCount     Int       @default(0) @map("total_count")
+
+  monthly PhraseMonthly[]
+
+  @@unique([showId, slug])
+  @@map("phrase")
+}
+
+model PhraseMonthly {
+  phraseId Int      @map("phrase_id")
+  phrase   Phrase   @relation(fields: [phraseId], references: [id], onDelete: Cascade)
+  month    DateTime @db.Date
+  count    Int
+
+  @@id([phraseId, month])
+  @@map("phrase_monthly")
+}
