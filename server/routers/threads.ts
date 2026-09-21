@@ -77,111 +77,116 @@ export const threadsRouter = router({
       return { items, nextCursor: consumed < total ? consumed : null, total }
     }),
 
-  get: publicProcedure.input(z.object({ id: z.number().int() })).query(async ({ input }) => {
-    const base = await prisma.thread.findUnique({
-      where: { id: input.id },
-      select: threadCardSelect,
-    })
-    if (!base) throw new TRPCError({ code: 'NOT_FOUND' })
-    const [card] = await mapThreadCards([base])
-    if (!card) throw new TRPCError({ code: 'NOT_FOUND' })
+  // Addressed by show + thread slug; the numeric id is not stable across reloads.
+  get: publicProcedure
+    .input(z.object({ show: z.string().min(1), slug: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const base = await prisma.thread.findFirst({
+        where: { slug: input.slug, show: { slug: input.show } },
+        select: threadCardSelect,
+      })
+      if (!base) throw new TRPCError({ code: 'NOT_FOUND' })
+      const [card] = await mapThreadCards([base])
+      if (!card) throw new TRPCError({ code: 'NOT_FOUND' })
 
-    const [detail, messages] = await Promise.all([
-      prisma.thread.findUnique({
-        where: { id: input.id },
-        select: {
-          show: { select: { slug: true, name: true } },
-          episodes: {
-            orderBy: [{ isPrimary: 'desc' }, { confidence: 'desc' }],
-            select: {
-              relation: true,
-              confidence: true,
-              method: true,
-              isPrimary: true,
-              episode: {
-                select: {
-                  slug: true,
-                  title: true,
-                  seasonNumber: true,
-                  number: true,
-                  airDate: true,
+      const [detail, messages] = await Promise.all([
+        prisma.thread.findUnique({
+          where: { id: base.id },
+          select: {
+            show: { select: { slug: true, name: true } },
+            episodes: {
+              orderBy: [{ isPrimary: 'desc' }, { confidence: 'desc' }],
+              select: {
+                relation: true,
+                confidence: true,
+                method: true,
+                isPrimary: true,
+                episode: {
+                  select: {
+                    slug: true,
+                    title: true,
+                    seasonNumber: true,
+                    number: true,
+                    airDate: true,
+                  },
                 },
               },
             },
           },
-        },
-      }),
-      prisma.message.findMany({
-        where: { threadId: input.id },
-        orderBy: [{ postedAt: 'asc' }, { id: 'asc' }],
-        take: 1000,
-        select: {
-          id: true,
-          parentId: true,
-          depth: true,
-          subject: true,
-          postedAt: true,
-          dateOnly: true,
-          body: true,
-          lineCount: true,
-          isSpam: true,
-          poster: { select: { id: true, displayName: true } },
-        },
-      }),
-    ])
-    if (!detail) throw new TRPCError({ code: 'NOT_FOUND' })
+        }),
+        prisma.message.findMany({
+          where: { threadId: base.id },
+          orderBy: [{ postedAt: 'asc' }, { id: 'asc' }],
+          take: 1000,
+          select: {
+            id: true,
+            parentId: true,
+            depth: true,
+            subject: true,
+            postedAt: true,
+            dateOnly: true,
+            body: true,
+            lineCount: true,
+            isSpam: true,
+            poster: { select: { id: true, displayName: true } },
+          },
+        }),
+      ])
+      if (!detail) throw new TRPCError({ code: 'NOT_FOUND' })
 
-    const thread: ThreadCard & {
-      showSlug: string
-      showName: string
-      episodes: Array<{
-        slug: string
-        title: string
-        seasonNumber: number
-        number: number
-        airDate: string
-        relation: 'live' | 'retro'
-        confidence: number
-        method: string
-        isPrimary: boolean
-      }>
-    } = {
-      ...card,
-      showSlug: detail.show.slug,
-      showName: detail.show.name,
-      episodes: detail.episodes.map((te) => ({
-        slug: te.episode.slug,
-        title: te.episode.title,
-        seasonNumber: te.episode.seasonNumber,
-        number: te.episode.number,
-        airDate: te.episode.airDate.toISOString().slice(0, 10),
-        relation: te.relation,
-        confidence: te.confidence,
-        method: te.method,
-        isPrimary: te.isPrimary,
-      })),
-    }
+      const thread: ThreadCard & {
+        showSlug: string
+        showName: string
+        episodes: Array<{
+          slug: string
+          title: string
+          seasonNumber: number
+          number: number
+          airDate: string
+          relation: 'live' | 'retro'
+          confidence: number
+          method: string
+          isPrimary: boolean
+        }>
+      } = {
+        ...card,
+        showSlug: detail.show.slug,
+        showName: detail.show.name,
+        episodes: detail.episodes.map((te) => ({
+          slug: te.episode.slug,
+          title: te.episode.title,
+          seasonNumber: te.episode.seasonNumber,
+          number: te.episode.number,
+          airDate: te.episode.airDate.toISOString().slice(0, 10),
+          relation: te.relation,
+          confidence: te.confidence,
+          method: te.method,
+          isPrimary: te.isPrimary,
+        })),
+      }
 
-    return {
-      thread,
-      messages: messages.map((m) => ({
-        id: m.id,
-        parentId: m.parentId,
-        depth: m.depth,
-        subject: m.subject,
-        postedAt: iso(m.postedAt),
-        dateOnly: m.dateOnly,
-        body: m.body,
-        lineCount: m.lineCount,
-        isSpam: m.isSpam,
-        poster: { id: m.poster.id, displayName: m.poster.displayName },
-      })),
-      truncated: base.messageCount > 1000,
-    }
-  }),
+      return {
+        thread,
+        messages: messages.map((m) => ({
+          id: m.id,
+          parentId: m.parentId,
+          depth: m.depth,
+          subject: m.subject,
+          postedAt: iso(m.postedAt),
+          dateOnly: m.dateOnly,
+          body: m.body,
+          lineCount: m.lineCount,
+          isSpam: m.isSpam,
+          poster: { id: m.poster.id, displayName: m.poster.displayName },
+        })),
+        truncated: base.messageCount > 1000,
+      }
+    }),
 
   latest: publicProcedure
-    .input(z.object({ slug: z.string().min(1), limit: z.number().int().min(1).max(50).default(20) }))
+    .input(
+      z.object({ slug: z.string().min(1), limit: z.number().int().min(1).max(50).default(20) })
+    )
     .query(async ({ input }) => {
       const show = await prisma.show.findUnique({
         where: { slug: input.slug },

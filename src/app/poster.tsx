@@ -3,8 +3,9 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTRPC } from '~/lib/trpc'
 import { Badge } from '~/components/badge'
+import { SectionHeading } from '~/components/section-heading'
 import { Sparkline } from '~/components/sparkline'
-import { ThreadCard } from '~/components/thread-card'
+import { ThreadRow } from '~/components/thread-row'
 import { PREDICTION_OUTCOME } from '~/lib/taxonomy'
 import { formatDate, formatNumber, formatYear, plural } from '~/lib/format'
 
@@ -56,10 +57,10 @@ export function PosterPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       <div className="space-y-2">
         <div>
-          <h1 className="font-serif text-4xl font-semibold tracking-tight text-balance">
+          <h1 className="font-serif text-5xl leading-[1.05] font-semibold tracking-tight text-balance">
             {poster.displayName}
           </h1>
           <div className="text-muted-foreground flex flex-wrap gap-x-2 text-sm">
@@ -89,7 +90,7 @@ export function PosterPage() {
             {shows.map((s, i) => (
               <Fragment key={s.slug}>
                 {i > 0 && ', '}
-                <Link to={`/${s.slug}`} className="hover:underline">
+                <Link to={`/${s.slug}`} className="text-link">
                   {s.name}
                 </Link>
               </Fragment>
@@ -98,31 +99,29 @@ export function PosterPage() {
         )}
       </div>
 
-      <section className="space-y-4">
-        <h2 className="font-serif text-2xl font-semibold tracking-tight">Threads started</h2>
+      <section className="space-y-5">
+        <SectionHeading>Threads started</SectionHeading>
         {threadsStarted.length === 0 ? (
           <p className="text-muted-foreground text-sm">Never started a thread — a replier.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="border-t">
             {threadsStarted.map((thread) => (
-              <ThreadCard key={thread.id} thread={thread} showSlug={show} />
+              <ThreadRow key={thread.id} thread={thread} showSlug={show} />
             ))}
           </div>
         )}
       </section>
 
       {predictions.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="font-serif text-2xl font-semibold tracking-tight">Predictions</h2>
+        <section className="space-y-5">
+          <SectionHeading>Predictions</SectionHeading>
           <ul className="space-y-3">
             {predictions.map((p) => {
               const outcome = p.predictionOutcome ? PREDICTION_OUTCOME[p.predictionOutcome] : null
               return (
                 <li key={p.threadId} className="space-y-1">
                   <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
-                    <Link
-                      to={`/${show}/thread/${p.threadId}`}
-                      className="font-medium hover:underline">
+                    <Link to={`/${show}/thread/${p.threadSlug}`} className="text-link font-medium">
                       {p.subject}
                     </Link>
                     {outcome && (

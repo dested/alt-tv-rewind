@@ -56,6 +56,19 @@ export function stripRe(subject: string): string {
   return subject.replace(/^(?:\s*(?:re|fwd?|aw)\s*:\s*)+/i, '')
 }
 
+// Depth-first pre-order flatten of a reply forest. The transcript renders one
+// flat list in this order (parent, then each subtree), with the "↩ name" link
+// carrying the reply relationship instead of indentation (see ui.md "Thread").
+export function threadOrder<T extends { children: T[] }>(roots: T[]): T[] {
+  const out: T[] = []
+  const walk = (node: T): void => {
+    out.push(node)
+    for (const child of node.children) walk(child)
+  }
+  for (const root of roots) walk(root)
+  return out
+}
+
 // --- signature ------------------------------------------------------------
 
 const EMAIL_TEST = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/
@@ -138,10 +151,13 @@ const ATTR_INLINE = new RegExp(
 const VERB_ONLY = new RegExp(`^${VERB}\\s*:?\\s*$`, 'i')
 
 // Resolve an attribution string to a human name, or null if it is empty or
-// still address-shaped after redaction.
+// still address-shaped after redaction. redact turns emails into `[email]` and
+// bang paths into `[address]`, so a redacted result carrying either — or one
+// with no letter at all — is an address, not a name (ui.md: "Quoted text").
 function normalizeAttribution(name: string): string | null {
   const red = redact(name).trim()
-  if (red === '' || red.includes('@') || red.includes('!')) return null
+  if (red === '' || red.includes('[email]') || red.includes('[address]') || !/[a-z]/i.test(red))
+    return null
   return red
 }
 

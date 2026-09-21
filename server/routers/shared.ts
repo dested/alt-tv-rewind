@@ -50,6 +50,7 @@ export type EpisodeCard = {
 
 export type ThreadCard = {
   id: number
+  slug: string // stable URL identity (survives reloads; ids do not)
   subject: string
   startedAt: string
   startedDateOnly: boolean // the opener's header had no time of day
@@ -159,6 +160,7 @@ export function toEpisodeCard(e: EpisodeCardRow): EpisodeCard {
 // single batched lookup on rootMessageId (no relation exists for it).
 export const threadCardSelect = {
   id: true,
+  slug: true,
   subject: true,
   startedAt: true,
   startedDateOnly: true,
@@ -218,6 +220,7 @@ function toThreadCard(r: ThreadCardRow, starter: Starter): ThreadCard {
   const daysAfterAir = primary ? daysBetweenAirAndPost(primary.episode.airDate, r.startedAt) : null
   return {
     id: r.id,
+    slug: r.slug,
     subject: r.subject,
     startedAt: iso(r.startedAt),
     startedDateOnly: r.startedDateOnly,

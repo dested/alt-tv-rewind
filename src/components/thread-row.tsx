@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import type { ThreadCard as ThreadCardData } from '~/lib/api-types'
+import type { ThreadCard } from '~/lib/api-types'
 import { Badge } from '~/components/badge'
 import { KIND, PREDICTION_OUTCOME, SENTIMENT } from '~/lib/taxonomy'
 import { formatDate, plural, relativeToAir } from '~/lib/format'
@@ -18,21 +18,21 @@ function MetaLine({ segments }: { segments: ReactNode[] }) {
   )
 }
 
-export function ThreadCard({ thread, showSlug }: { thread: ThreadCardData; showSlug: string }) {
+// A ruled list row (replaces the old card). Rendered inside a `border-t` wrapper
+// so the first row carries a rule above it too.
+export function ThreadRow({ thread, showSlug }: { thread: ThreadCard; showSlug: string }) {
   const when =
     relativeToAir(thread.hoursAfterAir, thread.daysAfterAir, thread.startedAt) ??
     formatDate(thread.startedAt)
 
   const segments: ReactNode[] = [
     thread.starter ? (
-      <Link to={`/${showSlug}/people/${thread.starter.id}`} className="hover:underline">
+      <Link to={`/${showSlug}/people/${thread.starter.id}`} className="text-link">
         {thread.starter.displayName}
       </Link>
     ) : (
       'unknown'
     ),
-    when,
-    plural(thread.messageCount, 'post'),
   ]
   if (thread.messageCount !== 1) segments.push(plural(thread.posterCount, 'poster'))
 
@@ -69,20 +69,26 @@ export function ThreadCard({ thread, showSlug }: { thread: ThreadCardData; showS
   }
 
   return (
-    <article className="bg-card space-y-2 rounded-xl border p-5">
-      <div>
+    <article className="grid gap-x-6 gap-y-1 border-b py-4 sm:grid-cols-[9rem_1fr]">
+      <div className="text-muted-foreground text-xs sm:text-right">
+        <div>{when}</div>
+        <div>{plural(thread.messageCount, 'post')}</div>
+      </div>
+      <div className="min-w-0 space-y-1.5">
         <Link
-          to={`/${showSlug}/thread/${thread.id}`}
-          className="font-serif text-lg leading-snug font-medium hover:underline">
+          to={`/${showSlug}/thread/${thread.slug}`}
+          className="hover:text-link block font-serif text-xl leading-snug font-medium">
           {thread.subject}
         </Link>
+        <MetaLine segments={segments} />
+        {badges.length > 0 && <div className="flex flex-wrap gap-1.5">{badges}</div>}
+        {thread.predictionClaim && (
+          <p className="font-serif text-[1rem] italic">{thread.predictionClaim}</p>
+        )}
+        {thread.summary && (
+          <p className="text-muted-foreground max-w-[66ch] text-sm">{thread.summary}</p>
+        )}
       </div>
-      <MetaLine segments={segments} />
-      {badges.length > 0 && <div className="flex flex-wrap gap-1.5">{badges}</div>}
-      {thread.predictionClaim && (
-        <p className="font-serif text-[0.95rem] italic">{thread.predictionClaim}</p>
-      )}
-      {thread.summary && <p className="text-muted-foreground text-sm">{thread.summary}</p>}
     </article>
   )
 }

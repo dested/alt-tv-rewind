@@ -28,7 +28,47 @@
     "name": "Friends",
     "newsgroup": "alt.tv.friends",
     "tvmazeQuery": "Friends",
+    "tvmazeId": 431,
+    "liveWindowDays": 10
+  },
+  {
+    "slug": "south-park",
+    "name": "South Park",
+    "newsgroup": "alt.tv.southpark",
+    "tvmazeQuery": "South Park",
+    "tvmazeId": 112,
+    "liveWindowDays": 10
+  },
+  {
+    "slug": "futurama",
+    "name": "Futurama",
+    "newsgroup": "alt.tv.futurama",
+    "tvmazeQuery": "Futurama",
+    "tvmazeId": 538,
+    "liveWindowDays": 10
+  },
+  {
+    "slug": "family-guy",
+    "name": "Family Guy",
+    "newsgroup": "alt.tv.family-guy",
+    "tvmazeQuery": "Family Guy",
+    "tvmazeId": 84,
+    "liveWindowDays": 10
+  },
+  {
+    "slug": "beavis-and-butt-head",
+    "name": "Beavis and Butt-Head",
+    "newsgroup": "alt.tv.beavis-n-butthead",
+    "tvmazeQuery": "Beavis and Butt-Head",
+    "tvmazeId": 910,
+    "liveWindowDays": 10
+  },
+  {
+    "slug": "daria",
+    "name": "Daria",
+    "newsgroup": "alt.tv.daria",
+    "tvmazeQuery": "Daria",
     "liveWindowDays": 10,
-    "tvmazeId": 431
+    "tvmazeId": 2554
   }
 ]

@@ -53,7 +53,9 @@ export function SearchPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-serif text-4xl font-semibold tracking-tight text-balance">Search</h1>
+        <h1 className="font-serif text-5xl leading-[1.05] font-semibold tracking-tight text-balance">
+          Search
+        </h1>
         {archive && (
           <p className="text-muted-foreground text-sm">
             {archive.newsgroup} · {formatNumber(archive.messageCount)} posts
@@ -74,7 +76,7 @@ export function SearchPage() {
           <select
             name="season"
             defaultValue={params.get('season') ?? ''}
-            className="border-input bg-card h-9 rounded-md border px-2 text-sm">
+            className="border-input bg-background h-9 rounded-md border px-2 text-sm">
             <option value="">Any season</option>
             {seasons.map((s) => (
               <option key={s.number} value={s.number}>
@@ -115,58 +117,64 @@ export function SearchPage() {
           <p className="text-muted-foreground text-sm">
             {plural(results.data.total, 'thread')} {results.data.total === 1 ? 'matches' : 'match'}
           </p>
-          {results.data.threads.map(({ thread, hits }) => {
-            const meta: ReactNode[] = [formatDate(thread.startedAt)]
-            if (thread.episode) {
-              meta.push(
-                <Link to={`/${show}/${thread.episode.slug}`} className="hover:underline">
-                  {episodeCode(thread.episode.seasonNumber, thread.episode.number)}{' '}
-                  {thread.episode.title}
-                </Link>
-              )
-            }
-            meta.push(plural(thread.messageCount, 'post'))
-            return (
-              <article key={thread.id} className="bg-card space-y-2 rounded-xl border p-5">
-                <div>
+          <div className="border-t">
+            {results.data.threads.map(({ thread, hits }) => {
+              const meta: ReactNode[] = [formatDate(thread.startedAt)]
+              if (thread.episode) {
+                meta.push(
                   <Link
-                    to={`/${show}/thread/${thread.id}`}
-                    className="font-serif text-lg leading-snug font-medium hover:underline">
-                    {thread.subject}
+                    to={`/${show}/${thread.episode.slug}`}
+                    className="text-link inline-flex items-center rounded-md border px-2 py-0.5 text-xs">
+                    {episodeCode(thread.episode.seasonNumber, thread.episode.number)}{' '}
+                    {thread.episode.title}
                   </Link>
-                </div>
-                <div className="text-muted-foreground flex flex-wrap gap-x-2 text-sm">
-                  {meta.map((seg, i) => (
-                    <Fragment key={i}>
-                      {i > 0 && <span aria-hidden>·</span>}
-                      {seg}
-                    </Fragment>
-                  ))}
-                </div>
-                {hits.map((hit) => (
-                  <div key={hit.messageId} className="space-y-0.5">
-                    <span className="text-muted-foreground text-xs">
-                      {hit.posterName} · {formatDate(hit.postedAt)}
-                    </span>
-                    <div
-                      className="post text-muted-foreground text-[0.95rem]"
-                      dangerouslySetInnerHTML={{ __html: snippetToHtml(redactEmails(hit.snippet)) }}
-                    />
+                )
+              }
+              meta.push(plural(thread.messageCount, 'post'))
+              return (
+                <article key={thread.id} className="space-y-2 border-b py-5">
+                  <div>
+                    <Link
+                      to={`/${show}/thread/${thread.slug}`}
+                      className="hover:text-link block font-serif text-xl leading-snug font-medium">
+                      {thread.subject}
+                    </Link>
                   </div>
-                ))}
-              </article>
-            )
-          })}
+                  <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                    {meta.map((seg, i) => (
+                      <Fragment key={i}>
+                        {i > 0 && <span aria-hidden>·</span>}
+                        {seg}
+                      </Fragment>
+                    ))}
+                  </div>
+                  {hits.map((hit) => (
+                    <div key={hit.messageId} className="space-y-0.5">
+                      <span className="text-muted-foreground text-xs">
+                        {hit.posterName} · {formatDate(hit.postedAt)}
+                      </span>
+                      <div
+                        className="post text-muted-foreground text-[1rem]"
+                        dangerouslySetInnerHTML={{
+                          __html: snippetToHtml(redactEmails(hit.snippet)),
+                        }}
+                      />
+                    </div>
+                  ))}
+                </article>
+              )
+            })}
+          </div>
           <nav className="flex justify-between">
             {cursor > 0 ? (
-              <Link to={pageHref(Math.max(0, cursor - 20))} className="text-sm hover:underline">
+              <Link to={pageHref(Math.max(0, cursor - 20))} className="text-link text-sm">
                 ← Previous
               </Link>
             ) : (
               <span />
             )}
             {results.data.nextCursor !== null ? (
-              <Link to={pageHref(results.data.nextCursor)} className="text-sm hover:underline">
+              <Link to={pageHref(results.data.nextCursor)} className="text-link text-sm">
                 Next →
               </Link>
             ) : (

@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, useState } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { Link, useParams, useRouteLoaderData } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTRPC } from '~/lib/trpc'
@@ -6,106 +6,22 @@ import { AdminFixEpisode } from '~/components/admin-fix-episode'
 import { Avatar } from '~/components/avatar'
 import { Badge } from '~/components/badge'
 import { MessageBody } from '~/components/message-body'
-import { buildTree, type Node } from '~/lib/thread-tree'
+import { buildTree } from '~/lib/thread-tree'
 import { KIND, PREDICTION_OUTCOME, SENTIMENT } from '~/lib/taxonomy'
 import { episodeCode, formatDateTime, formatNumber, plural, relativeToAir } from '~/lib/format'
-import { stripRe } from '~/lib/usenet'
+import { stripRe, threadOrder } from '~/lib/usenet'
 import type { RootLoaderData } from './routes'
 
-function countDescendants(node: Node): number {
-  return node.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0)
-}
-
-// Indent rail for a node's children. Caps visual depth at 4 on ≥sm, 2 below;
-// deeper replies flatten and rely on the "↩ name" link.
-function childRail(depth: number): string {
-  if (depth < 2) return 'ml-[1.125rem] border-l pl-[1.875rem]'
-  if (depth < 4) return 'sm:ml-[1.125rem] sm:border-l sm:pl-[1.875rem]'
-  return ''
-}
-
-function MessageNode({
-  node,
-  byId,
-  depth,
-  collapsed,
-  toggle,
-  showSlug,
-}: {
-  node: Node
-  byId: Map<number, Node>
-  depth: number
-  collapsed: Set<number>
-  toggle: (id: number) => void
-  showSlug: string
-}) {
-  const m = node.message
-  const parent = m.parentId === null ? undefined : byId.get(m.parentId)
-  const isCollapsed = collapsed.has(m.id)
-  const replyCount = countDescendants(node)
-
-  return (
-    <article id={`m${m.id}`} className="grid grid-cols-[2.25rem_1fr] gap-x-3 py-5">
-      <Avatar name={m.poster.displayName} />
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
-          <Link to={`/${showSlug}/people/${m.poster.id}`} className="font-medium hover:underline">
-            {m.poster.displayName}
-          </Link>
-          <time className="text-muted-foreground text-xs">
-            {formatDateTime(m.postedAt, m.dateOnly)}
-          </time>
-          {parent && (
-            <a href={`#m${m.parentId}`} className="text-muted-foreground text-xs hover:underline">
-              ↩ {parent.message.poster.displayName}
-            </a>
-          )}
-          {node.children.length > 0 && (
-            <button
-              type="button"
-              onClick={() => toggle(m.id)}
-              className="text-muted-foreground hover:text-foreground ml-auto text-xs">
-              {isCollapsed
-                ? `show ${plural(replyCount, 'reply', 'replies')}`
-                : `collapse ${plural(replyCount, 'reply', 'replies')}`}
-            </button>
-          )}
-        </div>
-        <div className="mt-1.5">
-          <MessageBody body={m.body} />
-        </div>
-        {!isCollapsed && node.children.length > 0 && (
-          <div className={childRail(depth)}>
-            {node.children.map((child) => (
-              <MessageNode
-                key={child.message.id}
-                node={child}
-                byId={byId}
-                depth={depth + 1}
-                collapsed={collapsed}
-                toggle={toggle}
-                showSlug={showSlug}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-    </article>
-  )
-}
-
 export function ThreadPage() {
-  const { id } = useParams()
+  const { show, slug } = useParams()
   const trpc = useTRPC()
   const rootData = useRouteLoaderData('root') as RootLoaderData | undefined
   const session = rootData?.session ?? null
-  const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
 
-  const threadId = Number(id)
   const threadQuery = useQuery(
     trpc.threads.get.queryOptions(
-      { id: threadId },
-      { enabled: Number.isInteger(threadId) && threadId > 0 }
+      { show: show ?? '', slug: slug ?? '' },
+      { enabled: Boolean(show && slug) }
     )
   )
 
@@ -116,15 +32,9 @@ export function ThreadPage() {
   const showSlug = thread.showSlug
   const ep = thread.episodes.find((e) => e.isPrimary) ?? null
   const { roots, byId } = buildTree(data.messages)
-
-  function toggle(nodeId: number) {
-    setCollapsed((prev) => {
-      const next = new Set(prev)
-      if (next.has(nodeId)) next.delete(nodeId)
-      else next.add(nodeId)
-      return next
-    })
-  }
+  // Flat, depth-first: the reply relationship is carried by the "↩ name" gutter
+  // link, never by indentation (see ui.md "Thread").
+  const ordered = threadOrder(roots)
 
   const badges: ReactNode[] = []
   if (thread.kind && thread.kind !== 'reaction') {
@@ -164,7 +74,7 @@ export function ThreadPage() {
     metaSegments.push(
       <Link
         to={`/${showSlug}/${ep.slug}`}
-        className="hover:border-foreground/40 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs">
+        className="text-link hover:bg-link-soft inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs">
         {episodeCode(ep.seasonNumber, ep.number)} {ep.title}
         <span className="text-muted-foreground">{ep.relation}</span>
       </Link>
@@ -177,9 +87,9 @@ export function ThreadPage() {
   )
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-3xl">
       <div className="space-y-3">
-        <h1 className="font-serif text-3xl leading-tight font-semibold tracking-tight text-balance">
+        <h1 className="font-serif text-4xl leading-[1.1] font-semibold tracking-tight text-balance">
           {stripRe(thread.subject)}
         </h1>
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
@@ -191,15 +101,14 @@ export function ThreadPage() {
           ))}
         </div>
         {badges.length > 0 && <div className="flex flex-wrap gap-1.5">{badges}</div>}
-        {thread.predictionClaim && (
-          <p className="font-serif text-sm italic">{thread.predictionClaim}</p>
-        )}
+        {thread.predictionClaim && <p className="font-serif italic">{thread.predictionClaim}</p>}
         {thread.summary && (
-          <p className="text-muted-foreground max-w-[68ch] text-sm">{thread.summary}</p>
+          <p className="text-muted-foreground max-w-[66ch] text-sm">{thread.summary}</p>
         )}
         {session && (
           <AdminFixEpisode
-            threadId={threadId}
+            threadId={thread.id}
+            threadSlug={thread.slug}
             showSlug={showSlug}
             currentEpisodeSlug={ep?.slug ?? null}
           />
@@ -207,23 +116,44 @@ export function ThreadPage() {
       </div>
 
       {data.truncated && (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground mt-6 text-sm">
           Showing the first {formatNumber(1000)} posts of {formatNumber(thread.messageCount)}.
         </p>
       )}
 
-      <div className="divide-y">
-        {roots.map((root) => (
-          <MessageNode
-            key={root.message.id}
-            node={root}
-            byId={byId}
-            depth={0}
-            collapsed={collapsed}
-            toggle={toggle}
-            showSlug={showSlug}
-          />
-        ))}
+      <div className="border-rule mt-8 border-t-[1.5px]">
+        {ordered.map((node) => {
+          const m = node.message
+          const parent = m.parentId === null ? undefined : byId.get(m.parentId)
+          return (
+            <article
+              key={m.id}
+              id={`m${m.id}`}
+              className="grid gap-x-6 gap-y-2 border-b py-6 last:border-b-0 sm:grid-cols-[11rem_1fr]">
+              <div className="flex items-center gap-2 sm:block sm:text-right">
+                <span className="sm:mb-1.5 sm:ml-auto sm:block">
+                  <Avatar name={m.poster.displayName} size={28} />
+                </span>
+                <Link
+                  to={`/${showSlug}/people/${m.poster.id}`}
+                  className="text-link text-sm font-semibold hover:underline">
+                  {m.poster.displayName}
+                </Link>
+                <time className="text-muted-foreground text-xs sm:block">
+                  {formatDateTime(m.postedAt, m.dateOnly)}
+                </time>
+                {parent && (
+                  <a href={`#m${m.parentId}`} className="text-link text-xs sm:block">
+                    ↩ {parent.message.poster.displayName}
+                  </a>
+                )}
+              </div>
+              <div className="min-w-0">
+                <MessageBody body={m.body} />
+              </div>
+            </article>
+          )
+        })}
       </div>
     </div>
   )

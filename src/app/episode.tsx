@@ -5,8 +5,9 @@ import { useTRPC } from '~/lib/trpc'
 import type { RouterOutputs } from '~/lib/api-types'
 import { FilterTabs } from '~/components/filter-tabs'
 import { ReactionCurve } from '~/components/reaction-curve'
+import { SectionHeading } from '~/components/section-heading'
 import { StatLine } from '~/components/stat-line'
-import { ThreadCard } from '~/components/thread-card'
+import { ThreadRow } from '~/components/thread-row'
 import { Button } from '~/components/ui/button'
 import { isEpisodeFilter, type EpisodeFilter } from '~/lib/taxonomy'
 import {
@@ -17,6 +18,10 @@ import {
   formatNumber,
   relativeToAir,
 } from '~/lib/format'
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0')
+}
 
 type ByEpisode = RouterOutputs['threads']['byEpisode']
 
@@ -151,31 +156,37 @@ export function EpisodePage() {
       : 'Nothing in this category.'
 
   return (
-    <div className="space-y-10">
-      {ep.imageUrl && (
-        <img src={ep.imageUrl} alt="" className="aspect-video w-full rounded-xl object-cover" />
-      )}
-
-      <div className="space-y-3">
-        <div>
-          <h1 className="font-serif text-5xl font-semibold tracking-tight text-balance">
-            {ep.title}
-          </h1>
+    <div className="space-y-12">
+      <header
+        className={ep.imageUrl ? 'grid gap-8 md:grid-cols-[1fr_22rem] md:items-end' : 'grid gap-8'}>
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+            <span className="text-brand font-serif text-5xl font-light tracking-tight tabular-nums md:text-6xl">
+              {`S${pad2(ep.seasonNumber)} E${pad2(ep.number)}`}
+            </span>
+            <h1 className="font-serif text-5xl leading-[1.05] font-semibold tracking-tight text-balance md:text-6xl">
+              {ep.title}
+            </h1>
+          </div>
           <p className="text-muted-foreground text-sm">
-            Season {ep.seasonNumber} · Episode {ep.number} · Aired {formatAirDate(ep.airDate)}
+            Aired {formatAirDate(ep.airDate)}
+            {ep.runtime !== null && ` · ${ep.runtime} min`}
           </p>
         </div>
-
-        {ep.recap ? (
-          <p className="border-brand max-w-[62ch] border-l-2 pl-4 font-serif text-xl leading-relaxed">
-            {ep.recap}
-          </p>
-        ) : (
-          ep.summary && <p className="text-muted-foreground max-w-[62ch]">{ep.summary}</p>
+        {ep.imageUrl && (
+          <img src={ep.imageUrl} alt="" className="aspect-video w-full border object-cover" />
         )}
+      </header>
 
-        <StatLine items={stats} />
-      </div>
+      {ep.recap ? (
+        <p className="first-letter:text-brand max-w-[30em] font-serif text-2xl leading-snug first-letter:float-left first-letter:pr-2 first-letter:font-serif first-letter:text-6xl first-letter:leading-[0.8]">
+          {ep.recap}
+        </p>
+      ) : (
+        ep.summary && <p className="text-muted-foreground max-w-[62ch]">{ep.summary}</p>
+      )}
+
+      <StatLine items={stats} />
 
       {data.reactionByDay.some((p) => p.messages > 0) && (
         <div className="space-y-1">
@@ -184,16 +195,18 @@ export function EpisodePage() {
         </div>
       )}
 
-      <section className="space-y-4">
-        <h2 className="font-serif text-2xl font-semibold tracking-tight">The morning after</h2>
+      <section className="space-y-5">
+        <SectionHeading>The morning after</SectionHeading>
         <FilterTabs value={tab} counts={counts} onChange={changeTab} />
         {liveItems.length === 0 ? (
           <p className="text-muted-foreground text-sm">{liveEmpty}</p>
         ) : (
           <div className="space-y-4">
-            {liveItems.map((thread) => (
-              <ThreadCard key={thread.id} thread={thread} showSlug={showSlug} />
-            ))}
+            <div className="border-t">
+              {liveItems.map((thread) => (
+                <ThreadRow key={thread.id} thread={thread} showSlug={showSlug} />
+              ))}
+            </div>
             {liveNext !== null && (
               <Button
                 variant="outline"
@@ -208,25 +221,23 @@ export function EpisodePage() {
       </section>
 
       {data.quotes.length > 0 && (
-        <section className="space-y-4">
-          <h2 className="font-serif text-2xl font-semibold tracking-tight">
-            Best of the morning after
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
+        <section className="space-y-5">
+          <SectionHeading>Best of the morning after</SectionHeading>
+          <div className="grid gap-x-10 gap-y-8 md:grid-cols-2">
             {data.quotes.map((q) => {
               const when =
                 relativeToAir(q.hoursAfterAir, q.daysAfterAir, q.postedAt) ??
                 formatDateTime(q.postedAt, q.postedDateOnly)
               return (
-                <blockquote key={q.threadId} className="bg-card rounded-xl border p-5">
-                  <p className="font-serif text-xl leading-snug italic">
+                <blockquote key={q.threadId}>
+                  <p className="font-serif text-2xl leading-snug italic">
                     <span className="text-brand">“</span>
                     {q.pullQuote}
                     <span className="text-brand">”</span>
                   </p>
-                  <footer className="text-muted-foreground mt-3 text-xs">
+                  <footer className="text-muted-foreground mt-2 text-xs">
                     — {q.posterName ?? 'unknown'}, {when} ·{' '}
-                    <Link to={`/${showSlug}/thread/${q.threadId}`} className="hover:underline">
+                    <Link to={`/${showSlug}/thread/${q.threadSlug}`} className="text-link">
                       {q.subject}
                     </Link>
                   </footer>
@@ -237,15 +248,17 @@ export function EpisodePage() {
         </section>
       )}
 
-      <section className="space-y-4">
-        <h2 className="font-serif text-2xl font-semibold tracking-tight">Over the years</h2>
+      <section className="space-y-5">
+        <SectionHeading>Over the years</SectionHeading>
         {retroItems.length === 0 ? (
           <p className="text-muted-foreground text-sm">Nobody came back to this one later.</p>
         ) : (
           <div className="space-y-4">
-            {retroItems.map((thread) => (
-              <ThreadCard key={thread.id} thread={thread} showSlug={showSlug} />
-            ))}
+            <div className="border-t">
+              {retroItems.map((thread) => (
+                <ThreadRow key={thread.id} thread={thread} showSlug={showSlug} />
+              ))}
+            </div>
             {retroNext !== null && (
               <Button
                 variant="outline"
@@ -261,14 +274,14 @@ export function EpisodePage() {
 
       <nav className="flex justify-between text-sm">
         {data.prev ? (
-          <Link to={`/${showSlug}/${data.prev.slug}`} className="hover:underline">
+          <Link to={`/${showSlug}/${data.prev.slug}`} className="text-link">
             ← {episodeCode(data.prev.seasonNumber, data.prev.number)} {data.prev.title}
           </Link>
         ) : (
           <span className="text-muted-foreground" />
         )}
         {data.next ? (
-          <Link to={`/${showSlug}/${data.next.slug}`} className="hover:underline">
+          <Link to={`/${showSlug}/${data.next.slug}`} className="text-link">
             {episodeCode(data.next.seasonNumber, data.next.number)} {data.next.title} →
           </Link>
         ) : (

@@ -9,6 +9,10 @@ import { iso } from './shared'
 // can HTML-escape the fragment first, then swap the markers for <mark>. The
 // snippet source strips quoted lines, mirroring the index trigger.
 const HEADLINE_OPTIONS = 'MaxFragments=2, MaxWords=18, MinWords=8, StartSel=, StopSel='
+// Mirrors the FTS trigger's quoted-line strip. String.raw: inside a template
+// literal `\|` collapses to `|`, which made the alternation match every line
+// and blanked every snippet.
+const QUOTED_LINE_RE = String.raw`(^|\n)[ \t]*(>|\|)[^\n]*`
 const RESULTS_LIMIT = 300
 const HITS_PER_THREAD = 3
 const THREADS_PER_PAGE = 20
@@ -76,7 +80,7 @@ export const searchRouter = router({
 
       const raw = await prisma.$queryRaw`
         SELECT m.id, m.thread_id AS "threadId", m.posted_at AS "postedAt", p.display_name AS "posterName",
-               ts_headline('english', regexp_replace(left(m.body, 6000), '(^|\n)[ \t]*(>|\|)[^\n]*', ' ', 'g'), q, ${HEADLINE_OPTIONS}) AS snippet,
+               ts_headline('english', regexp_replace(left(m.body, 6000), ${QUOTED_LINE_RE}, ' ', 'g'), q, ${HEADLINE_OPTIONS}) AS snippet,
                ts_rank_cd(m.search, q) AS rank
         FROM message m
         JOIN thread t ON t.id = m.thread_id
@@ -116,6 +120,7 @@ export const searchRouter = router({
             where: { id: { in: pageIds } },
             select: {
               id: true,
+              slug: true,
               subject: true,
               startedAt: true,
               messageCount: true,
@@ -140,6 +145,7 @@ export const searchRouter = router({
           {
             thread: {
               id: t.id,
+              slug: t.slug,
               subject: t.subject,
               startedAt: iso(t.startedAt),
               messageCount: t.messageCount,

@@ -106,6 +106,7 @@ export const episodesRouter = router({
           take: 6,
           select: {
             id: true,
+            slug: true,
             subject: true,
             pullQuote: true,
             pullQuoteMessageId: true,
@@ -181,6 +182,7 @@ export const episodesRouter = router({
         return [
           {
             threadId: t.id,
+            threadSlug: t.slug,
             subject: t.subject,
             pullQuote: t.pullQuote,
             posterName: msg?.poster.displayName ?? null,

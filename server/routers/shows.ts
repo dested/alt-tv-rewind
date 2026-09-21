@@ -237,17 +237,17 @@ export const showsRouter = router({
       },
     })
 
-    // firstThreadId is the thread of the phrase's first message — resolved in one batch.
+    // firstThreadSlug is the thread of the phrase's first message — resolved in one batch.
     const firstMessageIds = phrases.flatMap((p) =>
       p.firstMessageId === null ? [] : [p.firstMessageId]
     )
     const firstMessages = firstMessageIds.length
       ? await prisma.message.findMany({
           where: { id: { in: firstMessageIds } },
-          select: { id: true, threadId: true },
+          select: { id: true, thread: { select: { slug: true } } },
         })
       : []
-    const threadByMessageId = new Map(firstMessages.map((m) => [m.id, m.threadId]))
+    const threadByMessageId = new Map(firstMessages.map((m) => [m.id, m.thread.slug]))
 
     return phrases.map((p) => ({
       slug: p.slug,
@@ -255,7 +255,7 @@ export const showsRouter = router({
       episodeSlug: p.episodeSlug,
       firstAt: isoOrNull(p.firstAt),
       firstMessageId: p.firstMessageId,
-      firstThreadId:
+      firstThreadSlug:
         p.firstMessageId === null ? null : (threadByMessageId.get(p.firstMessageId) ?? null),
       totalCount: p.totalCount,
       monthly: p.monthly.map((m) => ({ month: isoMonth(m.month), count: m.count })),

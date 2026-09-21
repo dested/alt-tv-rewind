@@ -58,6 +58,15 @@
 
 **Why:** 157k messages per archive; batched `INSERT … SELECT FROM unnest(...)` loads in seconds without a COPY dependency. tRPC procedures use Prisma except where FTS/`ts_headline`/aggregations need raw SQL.
 
+## 2026-09-21 — One light paper theme; dark mode removed — supersedes the 2026-09-11 dark-mode entry
+
+**Why:** the owner rejected the brutalist/dark look and asked for a single committed design ("no color changing, make it light. pick a design"). `ui.md` v3 is that design: cream paper, warm ink, red-orange `--brand`, print-blue `--link`, Newsreader + Inter, ruled rows instead of cards, flat transcript threads. `theme.ts`, `theme-toggle.tsx`, the pre-paint script and every `dark:` variant are gone; `color-scheme: light` is declared so form controls match.
+
+## 2026-09-21 — Thread URLs are content-hash slugs, not DB ids
+
+**Why:** `load --force` deletes and re-inserts a show's threads, so ids change on every reload and every shared link died. `Thread.slug` = first 12 hex of `sha256("<show slug>:<earliest message's Message-ID>")`, unique per show, computed by the loader after messages land (provisional `~<threadKey>` before that) and backfilled by migration `20260921060000_thread_slug`. `threads.get` takes `{show, slug}`.
+**Rejected:** slugifying the subject (collides constantly on "Re: last night's episode"); keeping ids and adding a redirect table (still breaks on the first reload before the table exists).
+
 ## 2026-09-20 — Dev port 7485, plain localhost, sign-up closed
 
 **Why:** owner rule: never 3000; portless only when an https origin is needed (it isn't — single app, no OAuth). better-auth stays only for the admin attribution-fixer; `ALLOW_SIGNUP=true` once to create the account, then off.

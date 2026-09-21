@@ -238,6 +238,10 @@ model Thread {
   archiveId     Int      @map("archive_id")
   archive       Archive  @relation(fields: [archiveId], references: [id], onDelete: Cascade)
   rootMessageId Int?     @unique @map("root_message_id") // no FK: set after messages load
+  // URL identity: 12 hex of sha256(show slug + ':' + earliest message's RFC id),
+  // stable across reloads (ids are not). The loader inserts a provisional
+  // '~<threadKey>' and rewrites it once messages are in.
+  slug          String
   subject       String // normalized ("Re:" stripped)
   startedAt     DateTime @map("started_at")
   // True when the earliest message's Date header had no time of day (Google's
@@ -265,6 +269,7 @@ model Thread {
   episodes ThreadEpisode[]
   messages Message[]
 
+  @@unique([showId, slug])
   @@index([showId, startedAt])
   @@index([showId, messageCount])
   @@index([showId, controversy])

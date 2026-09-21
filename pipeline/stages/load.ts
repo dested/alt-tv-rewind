@@ -65,6 +65,7 @@ const threadCols: ColumnSpec[] = [
   { name: 'max_depth', type: 'int' },
   { name: 'is_spam', type: 'boolean' },
   { name: 'started_date_only', type: 'boolean' },
+  { name: 'slug', type: 'text' },
   { name: 'kind', type: 'ThreadKind' },
   { name: 'sentiment', type: 'Sentiment' },
   { name: 'hot_take', type: 'boolean' },
@@ -313,6 +314,8 @@ export const run: Stage['run'] = async (ctx) => {
           max_depth: t.maxDepth,
           is_spam: t.isSpam || (cl?.spamProbability ?? 0) >= 90,
           started_date_only: t.startedDateOnly,
+          // Provisional, unique per show; rewritten from the earliest message below.
+          slug: `~${t.threadKey}`,
           kind: cl?.kind ?? null,
           sentiment: cl?.sentiment ?? null,
           hot_take: cl?.hotTake ?? null,
@@ -406,6 +409,20 @@ export const run: Stage['run'] = async (ctx) => {
           [rootThreadIds, rootMsgIds, archiveId]
         )
       }
+
+      // slug ← 12 hex of sha256("<show slug>:<earliest message's RFC id>"), so a
+      // thread's URL survives reloads (DB ids do not). Mirrors the backfill in
+      // migration 20260921060000_thread_slug — keep the two expressions identical.
+      await c.query(
+        `UPDATE thread t
+         SET slug = coalesce(left(encode(sha256(convert_to(s.slug || ':' || (
+               SELECT m.message_id FROM message m
+               WHERE m.thread_id = t.id ORDER BY m.posted_at, m.id LIMIT 1
+             ), 'UTF8')), 'hex'), 12), t.slug)
+         FROM show s
+         WHERE s.id = t.show_id AND t.archive_id = $1`,
+        [archiveId]
+      )
 
       // pull_quote_message_id ← the classified pull-quote's RFC id
       const pqThreadIds: number[] = []

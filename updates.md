@@ -2,6 +2,12 @@
 
 > Terse, newest-first log: what was asked → what was done. One entry per finished task.
 
+## 2026-09-21 — Paper redesign v3, transcript threads, stable thread slugs, five more shows
+
+Ask: "i hate this brutalist look… make it modern… feel like 90s but not tacky"; then "too far indented… no color changing, make it light. pick a design"; plus "in another agent do: southpark futurama family-guy beavis-n-butthead daria".
+Done: `ui.md` v3 — one cream-paper theme (dark mode, theme toggle and pre-paint script removed), Newsreader + Inter, red-orange brand / print-blue links, ruled `thread-row` listings replacing cards, flat transcript thread page ordered by reply with "↩ name" gutter links (`usenet.ts` parser: paragraph unwrap, folded quotes, signature cut, redaction). `Thread.slug` (12-hex content hash, migration `20260921060000_thread_slug`, NULL-safe backfill) and `/:show/thread/:slug` everywhere; `threads.get` takes `{show, slug}`. Five shows downloaded, resolved and loaded structurally (270k messages; first load attempt died on the loader's LATERAL slug query and a column dropped mid-migration — fixed, reloaded).
+Touched: ui.md, src/styles/app.css, src/app/*, src/components/{thread-row,section-heading,avatar,message-body}.tsx, src/lib/usenet.ts, prisma/schema.prisma + migration, pipeline/stages/load.ts, server/routers/{shared,threads,search,posters,episodes,shows}.ts, data/shows.json + data/shows/<5 slugs>/.
+
 ## 2026-09-21 — alt.tv.rewind: the whole product, first four shows
 
 Ask: turn the Seinfeld mbox viewer into a public, generic Usenet-vs-air-date archive on the full sal-starter stack; Jev for classification; categories 🔥😂😡🤯🧠; automate adding shows; then Simpsons, King of the Hill, Friends.

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTRPC } from '~/lib/trpc'
 import { EpisodeCard } from '~/components/episode-card'
 import { PhraseGrid } from '~/components/phrase-grid'
+import { SectionHeading } from '~/components/section-heading'
 import { StatRow } from '~/components/stat-row'
 import { ThenVsNow } from '~/components/then-vs-now'
 import { VolumeTimeline } from '~/components/volume-timeline'
@@ -57,7 +58,7 @@ function ScoreList({
       <ul className="space-y-2 text-sm">
         {episodes.map((e) => (
           <li key={e.id} className="flex items-baseline justify-between gap-3">
-            <Link to={`/${showSlug}/${e.slug}`} className="hover:underline">
+            <Link to={`/${showSlug}/${e.slug}`} className="text-link">
               <span className="text-muted-foreground tabular-nums">
                 {episodeCode(e.seasonNumber, e.number)}
               </span>{' '}
@@ -132,18 +133,18 @@ export function ShowPage() {
   if (topEpisode) statItems.push({ value: topEpisode.title, label: 'most-discussed episode' })
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12">
       <section className="space-y-4">
-        <div className="flex gap-6">
+        <div className="flex flex-wrap items-end gap-8">
           {show.imageUrl && (
             <img
               src={show.imageUrl}
               alt=""
-              className="aspect-[2/3] w-28 shrink-0 rounded-xl object-cover"
+              className="aspect-[2/3] w-32 shrink-0 border object-cover"
             />
           )}
           <div className="space-y-1">
-            <h1 className="font-serif text-4xl font-semibold tracking-tight text-balance">
+            <h1 className="font-serif text-5xl leading-[1.05] font-semibold tracking-tight text-balance">
               {show.name}
             </h1>
             <p className="text-muted-foreground text-sm">{meta}</p>
@@ -153,10 +154,8 @@ export function ShowPage() {
         {archive && <StatRow items={statItems} />}
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-serif text-2xl font-semibold tracking-tight">
-          Every post, every night
-        </h2>
+      <section className="space-y-5">
+        <SectionHeading>Every post, every night</SectionHeading>
         <VolumeTimeline
           weeks={timeline.weeks}
           episodes={timeline.episodes}
@@ -168,23 +167,23 @@ export function ShowPage() {
         </p>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="font-serif text-2xl font-semibold tracking-tight">Seasons</h2>
+      <section className="space-y-5">
+        <SectionHeading>Seasons</SectionHeading>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-muted-foreground text-left text-xs">
-              <th className="py-2 font-medium">Season</th>
-              <th className="py-2 font-medium">Aired</th>
-              <th className="py-2 font-medium">Episodes</th>
-              <th className="py-2 font-medium">Live posts</th>
-              <th className="py-2 font-medium">Retro posts</th>
+            <tr className="text-muted-foreground text-left">
+              <th className="py-2 text-xs font-medium">Season</th>
+              <th className="py-2 text-xs font-medium">Aired</th>
+              <th className="py-2 text-xs font-medium">Episodes</th>
+              <th className="py-2 text-xs font-medium">Live posts</th>
+              <th className="py-2 text-xs font-medium">Retro posts</th>
             </tr>
           </thead>
           <tbody>
             {seasons.map((s) => (
               <tr key={s.number} className="border-t">
                 <td className="py-2">
-                  <Link to={`/${slug}/season/${s.number}`} className="hover:underline">
+                  <Link to={`/${slug}/season/${s.number}`} className="text-link">
                     Season {s.number}
                   </Link>
                 </td>
@@ -201,9 +200,9 @@ export function ShowPage() {
       </section>
 
       {topEpisodes.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-serif text-2xl font-semibold tracking-tight">Most discussed</h2>
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <section className="space-y-5">
+          <SectionHeading>Most discussed</SectionHeading>
+          <div className="grid gap-x-6 gap-y-8 sm:grid-cols-2 md:grid-cols-4">
             {topEpisodes.map((e) => (
               <EpisodeCard key={e.id} episode={e} showSlug={slug} />
             ))}
@@ -212,10 +211,8 @@ export function ShowPage() {
       )}
 
       {(mostLoved.length > 0 || mostHated.length > 0) && (
-        <section className="space-y-3">
-          <h2 className="font-serif text-2xl font-semibold tracking-tight">
-            Loved then, hated then
-          </h2>
+        <section className="space-y-5">
+          <SectionHeading>Loved then, hated then</SectionHeading>
           <div className="grid gap-8 md:grid-cols-2">
             {mostLoved.length > 0 && (
               <ScoreList episodes={mostLoved} showSlug={slug} label="Loved then" />
@@ -228,8 +225,8 @@ export function ShowPage() {
       )}
 
       {thenVsNow.length >= 5 && (
-        <section className="space-y-3">
-          <h2 className="font-serif text-2xl font-semibold tracking-tight">Then vs now</h2>
+        <section className="space-y-5">
+          <SectionHeading>Then vs now</SectionHeading>
           <ThenVsNow items={thenVsNow} showSlug={slug} />
           <p className="text-muted-foreground text-sm">
             Usenet score at the time against today's TVMaze rating. Labeled dots are the biggest
@@ -239,8 +236,8 @@ export function ShowPage() {
       )}
 
       {phrases.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="font-serif text-2xl font-semibold tracking-tight">Catchphrases</h2>
+        <section className="space-y-5">
+          <SectionHeading>Catchphrases</SectionHeading>
           <PhraseGrid phrases={phrases} showSlug={slug} />
         </section>
       )}

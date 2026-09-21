@@ -85,7 +85,7 @@ export function MessageBody({ body }: { body: string }) {
   )
 
   return (
-    <div className="post max-w-[68ch] space-y-3">
+    <div className="post max-w-[66ch] space-y-3">
       {blocks.map((block, i) =>
         block.type === 'quote' ? (
           <QuoteBlock key={i} block={block} startOpen={!hasProse} />

@@ -150,11 +150,9 @@ async function episodeLoader({ context, params }: LoaderFunctionArgs) {
 
 async function threadLoader({ context, params }: LoaderFunctionArgs) {
   const { queryClient, trpc } = clients(context)
-  const slug = param(params, 'show')
-  const id = intParam(params, 'id')
-  const data = await ensure(queryClient.ensureQueryData(trpc.threads.get.queryOptions({ id })))
-  // Canonical URL lives under the thread's own show.
-  if (data.thread.showSlug !== slug) throw redirect(`/${data.thread.showSlug}/thread/${id}`)
+  const show = param(params, 'show')
+  const slug = param(params, 'slug')
+  await ensure(queryClient.ensureQueryData(trpc.threads.get.queryOptions({ show, slug })))
   return null
 }
 
@@ -219,7 +217,7 @@ export const routes: RouteObject[] = [
           { path: 'search', Component: SearchPage, loader: searchLoader },
           { path: 'people', Component: PeoplePage, loader: peopleLoader },
           { path: 'people/:id', Component: PosterPage, loader: posterLoader },
-          { path: 'thread/:id', Component: ThreadPage, loader: threadLoader },
+          { path: 'thread/:slug', Component: ThreadPage, loader: threadLoader },
           // Static siblings above rank higher than this dynamic segment.
           { path: ':episode', Component: EpisodePage, loader: episodeLoader },
         ],

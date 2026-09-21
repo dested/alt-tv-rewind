@@ -65,14 +65,18 @@ src/
 │   ├── home.tsx · show.tsx · season.tsx · episode.tsx · thread.tsx · search.tsx · people.tsx · poster.tsx · sign-in.tsx
 │   └── error-boundary.tsx
 ├── components/
-│   ├── episode-card · thread-card · reaction-curve · volume-timeline · then-vs-now · phrase-grid · sparkline
-│   ├── filter-tabs · message-body · badge · stat-row · stat-line · admin-fix-episode · theme-toggle · ui/
+│   ├── thread-row.tsx       ruled listing row (avatar, subject, timing, glyphs) — the only thread listing
+│   ├── message-body.tsx     renders usenet.ts blocks: paragraphs, folded quotes, pre, no signature
+│   ├── avatar.tsx           poster monogram, hue from posterHue(name)
+│   ├── section-heading · episode-card · reaction-curve · volume-timeline · then-vs-now · phrase-grid · sparkline
+│   ├── filter-tabs · badge · stat-row · stat-line · admin-fix-episode · ui/
 ├── lib/
 │   ├── format.ts            ALL dates go through here (America/New_York, en-US); relativeToAir(hours, days, postedAt)
 │   ├── taxonomy.ts          KIND / SENTIMENT / PREDICTION_OUTCOME glyph maps, EPISODE_FILTERS — the only place emoji live
+│   ├── usenet.ts (+test)    message parser: unwrap paragraphs, nested quotes + attribution, signature cut, redaction, stripRe, threadOrder, posterHue
 │   ├── api-types.ts         RouterOutputs / ThreadCard / EpisodeCard
-│   ├── snippet.ts · thread-tree.ts · trpc.tsx · auth-client.ts · theme.ts · utils.ts
-└── styles/app.css           warm-paper tokens, --brand, .usenet / .usenet-quote / .usenet-sig, mark
+│   ├── snippet.ts · thread-tree.ts · trpc.tsx · auth-client.ts · utils.ts
+└── styles/app.css           the one paper theme (see ui.md): tokens, .post / .post-quote / .post-pre, mark; no dark mode
 prisma/schema.prisma + migrations/   see Data model
 e2e/                         Playwright smoke (stale — still the starter's sign-up/dashboard flow)
 ```
@@ -85,12 +89,12 @@ e2e/                         Playwright smoke (stale — still the starter's sig
 | `/:show`                              | show home: timeline, seasons, most discussed, loved/hated then, then-vs-now, catchphrases                                                              | `shows.get/timeline/thenVsNow/phrases` |
 | `/:show/season/:n`                    | season table                                                                                                                                           | `episodes.list`                        |
 | `/:show/:episode`                     | **the page** — hero, recap, stat line, reaction-by-day, filter tabs, live threads ("The morning after"), best quotes, retro threads ("Over the years") | `episodes.get`, `threads.byEpisode`    |
-| `/:show/thread/:id`                   | thread reader — tree, collapse, in-reply-to anchors, badges, admin fix panel                                                                           | `threads.get`                          |
+| `/:show/thread/:slug`                 | thread reader — flat transcript in reply order, "↩ name" gutter links, badges, admin fix panel                                                         | `threads.get`                          |
 | `/:show/search?q=&season=&from=&to=`  | FTS results grouped by thread                                                                                                                          | `search.query`                         |
 | `/:show/people` · `/:show/people/:id` | most prolific · prophets · poster profile                                                                                                              | `posters.*`                            |
 | `/sign-in`                            | admin only                                                                                                                                             | better-auth                            |
 
-Episode slugs look like `s07e24-the-invitations`. Thread ids are DB ids.
+Episode slugs look like `s07e24-the-invitations`. Thread slugs are 12 hex chars of `sha256("<show>:<earliest Message-ID>")`, stable across reloads (DB ids are not — never link by id).
 
 ## Pipeline
 
@@ -126,6 +130,6 @@ Stages run in order; each skips when its checkpoint exists unless `--force`. Tim
 
 ## Status
 
-- **Done:** schema + 4 migrations; full pipeline; all routers; all pages; Seinfeld loaded (157,386 messages / 33,550 threads / 180 episodes).
-- **In flight (2026-09-21):** Seinfeld classify → enrich → reload → stats → recap; Simpsons (135k msgs, 803 eps), King of the Hill, Friends ingesting (no LLM stages yet).
+- **Done:** schema + 5 migrations; full pipeline; all routers; all pages; nine shows loaded (Seinfeld, Simpsons, King of the Hill, Friends, South Park, Futurama, Family Guy, Beavis and Butt-Head, Daria — 665k messages). Seinfeld fully classified + enriched; Simpsons ~90% classified.
+- **In flight (2026-09-21):** classify Simpsons remainder → Friends → KOTH → the five new shows (blocked on TypeSafe credits); enrich re-run for the 3,429 over-length summaries (blocked on Anthropic credits); recap never run.
 - **Not built:** e2e refresh, prod deploy (owner: drydock), the other 19 archive.org groups, finale live-replay / on-this-day / digest ideas.

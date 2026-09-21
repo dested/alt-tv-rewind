@@ -12,12 +12,11 @@ import {
 } from 'react-router-dom'
 import { Search } from 'lucide-react'
 import { authClient } from '~/lib/auth-client'
-import { ThemeToggle } from '~/components/theme-toggle'
 import { cn } from '~/lib/utils'
 import type { RootLoaderData } from './routes'
 
 const navLink = ({ isActive }: { isActive: boolean }) =>
-  cn('text-sm', isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')
+  cn('text-link hover:underline', isActive && 'font-medium')
 
 export function Layout() {
   const data = useRouteLoaderData('root') as RootLoaderData | undefined
@@ -35,9 +34,9 @@ export function Layout() {
 
   return (
     <>
-      <header className="border-brand border-t-2 border-b">
+      <header className="border-brand border-t-4">
         <nav className="mx-auto flex max-w-5xl items-center gap-5 px-6 py-3">
-          <Link to="/" className="font-serif text-xl font-semibold tracking-tight">
+          <Link to="/" className="font-serif text-2xl font-semibold tracking-tight">
             alt.tv.rewind
           </Link>
           {show && (
@@ -76,17 +75,14 @@ export function Layout() {
               </Form>
             )}
             {session && (
-              <button
-                type="button"
-                className="text-muted-foreground hover:text-foreground text-sm hover:underline"
-                onClick={signOut}>
+              <button type="button" className="text-link text-sm hover:underline" onClick={signOut}>
                 Sign out
               </button>
             )}
-            <ThemeToggle />
           </div>
         </nav>
       </header>
+      <div className="border-rule border-b-2" />
       <main className="mx-auto max-w-5xl px-6 py-10">
         <Outlet />
       </main>

@@ -102,6 +102,7 @@ export const postersRouter = router({
           where: { id: { in: predIds } },
           select: {
             id: true,
+            slug: true,
             subject: true,
             predictionClaim: true,
             predictionOutcome: true,
@@ -121,6 +122,7 @@ export const postersRouter = router({
       return [
         {
           threadId: p.id,
+          threadSlug: p.slug,
           subject: p.subject,
           predictionClaim: p.predictionClaim,
           predictionOutcome: p.predictionOutcome,

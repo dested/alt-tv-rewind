@@ -59,9 +59,9 @@ export function SeasonPage() {
     : ''
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="space-y-1">
-        <h1 className="font-serif text-4xl font-semibold tracking-tight text-balance">
+        <h1 className="font-serif text-5xl leading-[1.05] font-semibold tracking-tight text-balance">
           Season {seasonNumber}
         </h1>
         {meta && <p className="text-muted-foreground text-sm">{meta}</p>}
@@ -69,13 +69,13 @@ export function SeasonPage() {
 
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-muted-foreground text-left text-xs">
-            <th className="py-2 font-medium">Code</th>
-            <th className="py-2 font-medium">Title</th>
-            <th className="py-2 font-medium">Aired</th>
-            <th className="py-2 font-medium">Live posts</th>
-            <th className="py-2 font-medium">Retro posts</th>
-            <th className="py-2 font-medium">Usenet score</th>
+          <tr className="text-muted-foreground text-left">
+            <th className="py-2 text-xs font-medium">Code</th>
+            <th className="py-2 text-xs font-medium">Title</th>
+            <th className="py-2 text-xs font-medium">Aired</th>
+            <th className="py-2 text-xs font-medium">Live posts</th>
+            <th className="py-2 text-xs font-medium">Retro posts</th>
+            <th className="py-2 text-xs font-medium">Usenet score</th>
           </tr>
         </thead>
         <tbody>
@@ -83,7 +83,7 @@ export function SeasonPage() {
             <tr key={e.id} className="border-t">
               <td className="py-2 tabular-nums">{episodeCode(e.seasonNumber, e.number)}</td>
               <td className="py-2">
-                <Link to={`/${slug}/${e.slug}`} className="hover:underline">
+                <Link to={`/${slug}/${e.slug}`} className="text-link">
                   {e.title}
                 </Link>
               </td>
@@ -100,14 +100,14 @@ export function SeasonPage() {
 
       <div className="flex justify-between text-sm">
         {prevSeason ? (
-          <Link to={`/${slug}/season/${prevSeason.number}`} className="hover:underline">
+          <Link to={`/${slug}/season/${prevSeason.number}`} className="text-link">
             ← Season {prevSeason.number}
           </Link>
         ) : (
           <span />
         )}
         {nextSeason ? (
-          <Link to={`/${slug}/season/${nextSeason.number}`} className="hover:underline">
+          <Link to={`/${slug}/season/${nextSeason.number}`} className="text-link">
             Season {nextSeason.number} →
           </Link>
         ) : (

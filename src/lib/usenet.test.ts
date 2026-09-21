@@ -1,5 +1,13 @@
 import { expect, test } from 'bun:test'
-import { type Block, initials, parseMessage, posterHue, redact, stripRe } from './usenet'
+import {
+  type Block,
+  initials,
+  parseMessage,
+  posterHue,
+  redact,
+  stripRe,
+  threadOrder,
+} from './usenet'
 
 function only(blocks: Block[], type: Block['type']): Block[] {
   return blocks.filter((b) => b.type === type)
@@ -31,6 +39,15 @@ test('quote carries the parenthesised attribution and consumes its intro line', 
   expect(paras).toEqual([{ type: 'paragraph', text: 'Totally agree.' }])
   const inner = quote.blocks.find((b) => b.type === 'paragraph')
   expect(inner).toEqual({ type: 'paragraph', text: 'Kramer was robbed.' })
+})
+
+test('an attribution that is only an address becomes null (Quoted text)', () => {
+  const body = ['uunet!foo!bar wrote:', '> Kramer was robbed.'].join('\n')
+  const quote = parseMessage(body).find((b) => b.type === 'quote')
+  if (!quote || quote.type !== 'quote') throw new Error('expected quote')
+  expect(quote.attribution).toBeNull()
+  // the address-shaped intro line is consumed, not left as a paragraph
+  expect(parseMessage(body).some((b) => b.type === 'paragraph')).toBe(false)
 })
 
 test('nested >> quote becomes a depth-2 quote block', () => {
@@ -129,6 +146,21 @@ test('posterHue is deterministic and in range', () => {
 
 test('empty body yields no blocks', () => {
   expect(parseMessage('')).toEqual([])
+})
+
+test('threadOrder flattens a reply tree depth-first, pre-order', () => {
+  type N = { id: number; children: N[] }
+  const forest: N[] = [
+    {
+      id: 1,
+      children: [
+        { id: 2, children: [{ id: 4, children: [] }] },
+        { id: 3, children: [] },
+      ],
+    },
+    { id: 5, children: [] },
+  ]
+  expect(threadOrder(forest).map((n) => n.id)).toEqual([1, 2, 4, 3, 5])
 })
 
 test('deep quotes flatten at depth 3', () => {

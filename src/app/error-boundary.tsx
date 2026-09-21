@@ -20,13 +20,14 @@ export function RouteErrorBoundary() {
 
   return (
     <>
-      <header className="border-brand border-t-2 border-b">
+      <header className="border-brand border-t-4">
         <nav className="mx-auto flex max-w-5xl items-center px-6 py-3">
-          <Link to="/" className="font-serif text-xl font-semibold tracking-tight">
+          <Link to="/" className="font-serif text-2xl font-semibold tracking-tight">
             alt.tv.rewind
           </Link>
         </nav>
       </header>
+      <div className="border-rule border-b-2" />
       <main className="mx-auto flex max-w-5xl flex-col items-start gap-4 px-6 py-16">
         <h1 className="font-serif text-5xl font-semibold tracking-tight text-balance">{title}</h1>
         <p className="text-muted-foreground">{message}</p>

@@ -13,7 +13,7 @@ export function Avatar({ name, size = 36 }: { name: string; size?: 28 | 36 }) {
         height: size,
         fontSize: size === 36 ? 13 : 11,
         background: `oklch(var(--avatar-l) 0.06 ${hue})`,
-        color: `oklch(var(--avatar-fg-l) 0.08 ${hue})`,
+        color: `oklch(var(--avatar-fg-l) 0.09 ${hue})`,
       }}>
       {initials(name)}
     </span>

@@ -34,30 +34,26 @@ export function PhraseGrid({
   showSlug: string
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
       {phrases.map((phrase) => {
         const values = filledMonthly(phrase.monthly)
         return (
-          <div key={phrase.slug} className="bg-card rounded-xl border p-4">
-            <div className="font-serif text-lg font-medium">{phrase.label}</div>
-            <div className="text-muted-foreground text-sm">
+          <div key={phrase.slug}>
+            <div className="font-serif text-base font-medium">{phrase.label}</div>
+            <div className="text-muted-foreground text-xs">
               {phrase.firstAt ? `first said ${formatDate(phrase.firstAt)}` : 'first said long ago'}
               {phrase.episodeSlug && (
                 <>
                   {' · in '}
-                  <Link
-                    to={`/${showSlug}/${phrase.episodeSlug}`}
-                    className="hover:text-foreground underline">
+                  <Link to={`/${showSlug}/${phrase.episodeSlug}`} className="text-link">
                     the episode
                   </Link>
                 </>
               )}
-              {phrase.firstThreadId !== null && (
+              {phrase.firstThreadSlug !== null && (
                 <>
                   {' · '}
-                  <Link
-                    to={`/${showSlug}/thread/${phrase.firstThreadId}`}
-                    className="hover:text-foreground underline">
+                  <Link to={`/${showSlug}/thread/${phrase.firstThreadSlug}`} className="text-link">
                     the thread
                   </Link>
                 </>

@@ -3,7 +3,6 @@ import { type DehydratedState } from '@tanstack/react-query'
 import { RouterProvider, createBrowserRouter } from 'react-router-dom'
 import App from './App'
 import { routes } from './app/routes'
-import { followSystemTheme } from '~/lib/theme'
 import { getBrowserClients } from '~/lib/trpc'
 
 declare global {
@@ -15,8 +14,6 @@ declare global {
 const dehydratedState = window.__SSR_STATE__?.dehydratedState ?? null
 
 const { queryClient, trpcClient } = getBrowserClients()
-
-followSystemTheme()
 
 const router = createBrowserRouter(routes)
 
