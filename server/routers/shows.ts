@@ -23,6 +23,14 @@ async function showIdBySlug(slug: string): Promise<number> {
   return show.id
 }
 
+// 'YYYY-MM-DD' of the UTC Monday starting the week that holds `day`.
+function mondayIso(day: Date): string {
+  const offset = (day.getUTCDay() + 6) % 7
+  return new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() - offset))
+    .toISOString()
+    .slice(0, 10)
+}
+
 export const showsRouter = router({
   list: publicProcedure.query(async () => {
     const shows = await prisma.show.findMany({
@@ -134,7 +142,7 @@ export const showsRouter = router({
       prisma.dailyVolume.findMany({
         where: { showId },
         orderBy: { day: 'asc' },
-        select: { day: true, messageCount: true, threadCount: true },
+        select: { day: true, messageCount: true },
       }),
       prisma.episode.findMany({
         where: { showId },
@@ -154,12 +162,15 @@ export const showsRouter = router({
         select: { number: true, premiered: true, ended: true },
       }),
     ])
+    // Weekly buckets (UTC Monday) — the chart only draws weeks, and a decade of
+    // daily rows is ~350KB of SSR state per show page.
+    const byWeek = new Map<string, number>()
+    for (const d of days) {
+      const week = mondayIso(d.day)
+      byWeek.set(week, (byWeek.get(week) ?? 0) + d.messageCount)
+    }
     return {
-      days: days.map((d) => ({
-        day: isoDate(d.day),
-        messages: d.messageCount,
-        threads: d.threadCount,
-      })),
+      weeks: [...byWeek].map(([week, messages]) => ({ week, messages })),
       episodes: episodes.map((e) => ({
         slug: e.slug,
         title: e.title,
@@ -245,7 +256,7 @@ export const showsRouter = router({
       firstAt: isoOrNull(p.firstAt),
       firstMessageId: p.firstMessageId,
       firstThreadId:
-        p.firstMessageId === null ? null : threadByMessageId.get(p.firstMessageId) ?? null,
+        p.firstMessageId === null ? null : (threadByMessageId.get(p.firstMessageId) ?? null),
       totalCount: p.totalCount,
       monthly: p.monthly.map((m) => ({ month: isoMonth(m.month), count: m.count })),
     }))

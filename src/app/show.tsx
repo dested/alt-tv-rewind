@@ -154,7 +154,7 @@ export function ShowPage() {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold tracking-tight">Every post, every night</h2>
         <VolumeTimeline
-          days={timeline.days}
+          weeks={timeline.weeks}
           episodes={timeline.episodes}
           seasons={timeline.seasons}
           showSlug={slug}

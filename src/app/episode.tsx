@@ -13,6 +13,7 @@ import {
   episodeCode,
   formatAirDate,
   formatDateTime,
+  formatMonth,
   formatNumber,
   relativeToAir,
 } from '~/lib/format'
@@ -141,10 +142,11 @@ export function EpisodePage() {
     stats.push({ value: formatNumber(ep.tvmazeRating), label: 'TVMaze today' })
   }
 
+  const preArchive = data.archiveFrom !== null && ep.airDate < data.archiveFrom.slice(0, 10)
   const liveEmpty =
     tab === 'all'
-      ? ep.airDate < '1992-06-25'
-        ? 'No live reaction survived for this episode — the archive begins in June 1992.'
+      ? preArchive && data.archiveFrom
+        ? `No live reaction survived for this episode — the archive begins in ${formatMonth(data.archiveFrom, 'long')}.`
         : 'No live reaction was captured for this episode.'
       : 'Nothing in this category.'
 

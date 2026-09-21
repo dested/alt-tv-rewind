@@ -43,12 +43,12 @@ function niceMax(value: number): number {
 type Week = { ms: number; iso: string; messages: number }
 
 export function VolumeTimeline({
-  days,
+  weeks: series,
   episodes,
   seasons,
   showSlug,
 }: {
-  days: Timeline['days']
+  weeks: Timeline['weeks']
   episodes: Timeline['episodes']
   seasons: Timeline['seasons']
   showSlug: string
@@ -57,25 +57,19 @@ export function VolumeTimeline({
   // null on the server and first client render, so the two markups match.
   const [hover, setHover] = useState<number | null>(null)
 
-  if (days.length === 0) {
+  const firstWeek = series[0]
+  const lastWeek = series[series.length - 1]
+  if (!firstWeek || !lastWeek) {
     return <p className="text-muted-foreground text-sm">No posts yet</p>
   }
 
-  const firstDay = days[0]
-  const lastDay = days[days.length - 1]
-  if (!firstDay || !lastDay) {
-    return <p className="text-muted-foreground text-sm">No posts yet</p>
-  }
-
-  const first = mondayUTC(firstDay.day)
-  const last = mondayUTC(lastDay.day)
+  // Server buckets are already UTC Mondays; fill the gaps so every week has a slot.
+  const first = mondayUTC(firstWeek.week)
+  const last = mondayUTC(lastWeek.week)
   const weekCount = Math.round((last - first) / WEEK) + 1
 
   const byWeek = new Map<number, number>()
-  for (const d of days) {
-    const ms = mondayUTC(d.day)
-    byWeek.set(ms, (byWeek.get(ms) ?? 0) + d.messages)
-  }
+  for (const w of series) byWeek.set(mondayUTC(w.week), w.messages)
   const weeks: Week[] = []
   for (let i = 0; i < weekCount; i++) {
     const ms = first + i * WEEK

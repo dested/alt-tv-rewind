@@ -55,7 +55,7 @@ export const episodesRouter = router({
       })
       if (!ep) throw new TRPCError({ code: 'NOT_FOUND' })
 
-      const [prev, next, kindGroups, sentimentGroups, quoteThreads] = await Promise.all([
+      const [prev, next, kindGroups, sentimentGroups, quoteThreads, archive] = await Promise.all([
         prisma.episode.findFirst({
           where: {
             showId: ep.showId,
@@ -113,6 +113,10 @@ export const episodesRouter = router({
             startedAt: true,
             startedDateOnly: true,
           },
+        }),
+        prisma.archive.findFirst({
+          where: { showId: ep.showId },
+          select: { firstPostAt: true },
         }),
       ])
 
@@ -204,6 +208,8 @@ export const episodesRouter = router({
           name: ep.show.name,
           liveWindowDays: ep.show.liveWindowDays,
         },
+        // First captured post — episodes that aired before it can have no live reaction.
+        archiveFrom: isoOrNull(archive?.firstPostAt ?? null),
         prev,
         next,
         reactionByDay,
