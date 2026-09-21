@@ -9,9 +9,9 @@ export function RouteErrorBoundary() {
   const error = useRouteError()
   const isNotFound = isRouteErrorResponse(error) && error.status === 404
 
-  const title = isNotFound ? '404' : 'Something went wrong'
+  const title = isNotFound ? 'Nothing at this address' : 'Something went wrong'
   const message = isNotFound
-    ? "This page doesn't exist."
+    ? 'No show, episode, or thread lives here.'
     : isRouteErrorResponse(error)
       ? `${error.status} ${error.statusText}`
       : error instanceof Error

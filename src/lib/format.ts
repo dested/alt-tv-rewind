@@ -48,10 +48,10 @@ export function formatTime(iso: string): string {
   return dtf({ hour: 'numeric', minute: '2-digit', timeZone: AIR_TZ }).format(new Date(iso))
 }
 
-// "1996-05" or ISO → "May 1996"
-export function formatMonth(value: string): string {
+// "1996-05" or ISO → "May 1996" / "September 1996"
+export function formatMonth(value: string, style: 'short' | 'long' = 'short'): string {
   const d = value.length === 7 ? new Date(`${value}-15T12:00:00Z`) : new Date(value)
-  return dtf({ month: 'short', year: 'numeric', timeZone: 'UTC' }).format(d)
+  return dtf({ month: style, year: 'numeric', timeZone: 'UTC' }).format(d)
 }
 
 export function formatYear(iso: string): string {
