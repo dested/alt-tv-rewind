@@ -180,7 +180,7 @@ export const run: Stage['run'] = async (ctx) => {
   let abortError: unknown = null
   let completed = 0
 
-  async function process(input: ThreadInput): Promise<void> {
+  async function classifyOne(input: ThreadInput): Promise<void> {
     if (abortError) return
     const questions = buildQuestions(episodes, input.candidateLines)
     const state = buildState(input, { ...showCtx, hints: hintsFor(input) })
@@ -231,7 +231,7 @@ export const run: Stage['run'] = async (ctx) => {
       if (i >= todo.length) return
       const input = todo[i]
       if (!input) return
-      await process(input)
+      await classifyOne(input)
     }
   }
 

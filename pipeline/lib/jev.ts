@@ -89,7 +89,7 @@ function formatStarted(iso: string): string {
 export function buildState(
   input: ThreadInput,
   ctx: { showName: string; newsgroup: string; hints: string[] },
-): JsonValue {
+): Record<string, JsonValue> {
   const state: Record<string, JsonValue> = {
     newsgroup: ctx.newsgroup,
     show: ctx.showName,

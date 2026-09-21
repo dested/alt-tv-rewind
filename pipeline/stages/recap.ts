@@ -182,7 +182,7 @@ export const run: Stage['run'] = async (ctx) => {
   const client = createClaudeClient()
   const stats = { written: 0, skipped: 0, input: 0, output: 0 }
 
-  const process = async (e: EpisodeRow): Promise<void> => {
+  const recapOne = async (e: EpisodeRow): Promise<void> => {
     const threadRes = await pool.query(
       `SELECT t.subject, t.message_count, t.poster_count, t.kind, t.sentiment, t.summary,
               t.pull_quote, t.prediction_claim, t.prediction_outcome, t.started_at
@@ -235,7 +235,7 @@ export const run: Stage['run'] = async (ctx) => {
       if (i >= episodes.length) return
       const e = episodes[i]
       if (!e) return
-      await process(e)
+      await recapOne(e)
     }
   }
   await Promise.all(Array.from({ length: Math.min(CONCURRENCY, episodes.length) }, () => worker()))
