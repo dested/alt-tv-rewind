@@ -111,15 +111,18 @@ export const run: Stage['run'] = async (ctx) => {
 
   const candidates = new Map<string, CandidateRecord>()
   const candPath = join(work, 'candidates.jsonl')
-  if (checkpointExists(candPath)) for await (const c of readJsonl(candPath, CandidateRecord)) candidates.set(c.threadKey, c)
+  if (checkpointExists(candPath))
+    for await (const c of readJsonl(candPath, CandidateRecord)) candidates.set(c.threadKey, c)
 
   const classified = new Map<string, ClassifiedRecord>()
   const classPath = join(work, 'classified.jsonl')
-  if (checkpointExists(classPath)) for await (const r of readJsonl(classPath, ClassifiedRecord)) classified.set(r.threadKey, r)
+  if (checkpointExists(classPath))
+    for await (const r of readJsonl(classPath, ClassifiedRecord)) classified.set(r.threadKey, r)
 
   const enriched = new Map<string, EnrichedRecord>()
   const enrichedPath = join(work, 'enriched.jsonl')
-  if (checkpointExists(enrichedPath)) for await (const r of readJsonl(enrichedPath, EnrichedRecord)) enriched.set(r.threadKey, r)
+  if (checkpointExists(enrichedPath))
+    for await (const r of readJsonl(enrichedPath, EnrichedRecord)) enriched.set(r.threadKey, r)
 
   const timings: Record<string, number> = {}
   const timed = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
@@ -151,7 +154,7 @@ export const run: Stage['run'] = async (ctx) => {
           episodes.show.summary,
           episodes.show.imageUrl,
           ctx.show.liveWindowDays,
-        ],
+        ]
       )
       const showId = IdRow.parse(showRes.rows[0]).id
 
@@ -179,7 +182,7 @@ export const run: Stage['run'] = async (ctx) => {
           returningSchema: SeasonRow,
           onConflict:
             'ON CONFLICT (show_id, number) DO UPDATE SET premiered=EXCLUDED.premiered, ended=EXCLUDED.ended, episode_count=EXCLUDED.episode_count',
-        },
+        }
       )
       const seasonIdByNumber = new Map(seasonReturned.map((r) => [r.number, r.id]))
 
@@ -216,11 +219,19 @@ export const run: Stage['run'] = async (ctx) => {
         if (id !== undefined) episodeIdByKey.set(ep.key, id)
         epAirMs.set(ep.key, Date.parse(ep.airDate + 'T00:00:00Z'))
       }
-      return { showId, seasons: seasonReturned.length, episodesCount: episodeReturned.length, episodeIdByKey, epAirMs }
-    }),
+      return {
+        showId,
+        seasons: seasonReturned.length,
+        episodesCount: episodeReturned.length,
+        episodeIdByKey,
+        epAirMs,
+      }
+    })
   )
   const { showId, episodeIdByKey, epAirMs } = step1
-  ctx.log(`load shows: 1 show, ${step1.seasons} seasons, ${step1.episodesCount} episodes (${timings['shows']}ms)`)
+  ctx.log(
+    `load shows: 1 show, ${step1.seasons} seasons, ${step1.episodesCount} episodes (${timings['shows']}ms)`
+  )
 
   // ── Step 2: archive + purge prior threads ──────────────────────────────────
   const archiveId = await timed('archive', () =>
@@ -230,12 +241,12 @@ export const run: Stage['run'] = async (ctx) => {
          VALUES ($1,$2,$3)
          ON CONFLICT (newsgroup) DO UPDATE SET show_id=EXCLUDED.show_id, source_file=EXCLUDED.source_file, ingested_at=now()
          RETURNING id`,
-        [showId, ctx.show.newsgroup, basename(ctx.paths.archive)],
+        [showId, ctx.show.newsgroup, basename(ctx.paths.archive)]
       )
       const id = IdRow.parse(res.rows[0]).id
       await c.query('DELETE FROM thread WHERE archive_id = $1', [id])
       return id
-    }),
+    })
   )
   ctx.log(`load archive: id ${archiveId} (${timings['archive']}ms)`)
 
@@ -263,7 +274,9 @@ export const run: Stage['run'] = async (ctx) => {
     })
     const map = new Map<string, number>()
     await inTransaction(async (c) => {
-      await insertRows(c, 'poster', posterCols, posterInsert, { onConflict: 'ON CONFLICT (key) DO NOTHING' })
+      await insertRows(c, 'poster', posterCols, posterInsert, {
+        onConflict: 'ON CONFLICT (key) DO NOTHING',
+      })
       const keys = posterInsert.map((p) => p.key)
       for (let i = 0; i < keys.length; i += 5000) {
         const chunk = keys.slice(i, i + 5000)
@@ -312,14 +325,17 @@ export const run: Stage['run'] = async (ctx) => {
         }
       })
       // RETURNING follows unnest array order, so ids line up with threadRows.
-      const ids = await insertRows(c, 'thread', threadCols, rows, { returning: ['id'], returningSchema: IdRow })
+      const ids = await insertRows(c, 'thread', threadCols, rows, {
+        returning: ['id'],
+        returningSchema: IdRow,
+      })
       const map = new Map<string, number>()
       threadRows.forEach((t, i) => {
         const idRow = ids[i]
         if (idRow) map.set(t.threadKey, idRow.id)
       })
       return map
-    }),
+    })
   )
   ctx.log(`load threads: ${threadIdByKey.size} (${timings['threads']}ms)`)
 
@@ -360,11 +376,15 @@ export const run: Stage['run'] = async (ctx) => {
       }
       await flush()
 
+      // The rows above are invisible to the planner until analyzed; without
+      // this, a second archive's self-join below picks a nested loop and runs
+      // for minutes instead of seconds.
+      await c.query('ANALYZE message')
       await c.query(
         `UPDATE message m SET parent_id = p.id
          FROM message p
          WHERE m.archive_id = $1 AND p.archive_id = $1 AND m.parent_ref = p.message_id`,
-        [archiveId],
+        [archiveId]
       )
 
       // root_message_id ← the message whose RFC id equals the thread's root id
@@ -383,7 +403,7 @@ export const run: Stage['run'] = async (ctx) => {
            FROM unnest($1::int[], $2::text[]) AS r(thread_id, msg_id)
            JOIN message m ON m.archive_id = $3 AND m.thread_id = r.thread_id AND m.message_id = r.msg_id
            WHERE t.id = r.thread_id`,
-          [rootThreadIds, rootMsgIds, archiveId],
+          [rootThreadIds, rootMsgIds, archiveId]
         )
       }
 
@@ -404,7 +424,7 @@ export const run: Stage['run'] = async (ctx) => {
            FROM unnest($1::int[], $2::text[]) AS r(thread_id, msg_id)
            JOIN message m ON m.archive_id = $3 AND m.message_id = r.msg_id
            WHERE t.id = r.thread_id`,
-          [pqThreadIds, pqMsgIds, archiveId],
+          [pqThreadIds, pqMsgIds, archiveId]
         )
       }
 
@@ -420,14 +440,16 @@ export const run: Stage['run'] = async (ctx) => {
       }
       let spamFlipped = 0
       if (spamFlipIds.length > 0) {
-        const res = await c.query('UPDATE message SET is_spam = true WHERE thread_id = ANY($1)', [spamFlipIds])
+        const res = await c.query('UPDATE message SET is_spam = true WHERE thread_id = ANY($1)', [
+          spamFlipIds,
+        ])
         spamFlipped = res.rowCount ?? 0
       }
       return { inserted, skipped, spamFlipped }
-    }),
+    })
   )
   ctx.log(
-    `load messages: ${step5.inserted} inserted, ${step5.skipped} skipped, ${step5.spamFlipped} spam-flipped (${timings['messages']}ms)`,
+    `load messages: ${step5.inserted} inserted, ${step5.skipped} skipped, ${step5.spamFlipped} spam-flipped (${timings['messages']}ms)`
   )
 
   // ── Step 6: thread_episode ──────────────────────────────────────────────────
@@ -443,7 +465,7 @@ export const run: Stage['run'] = async (ctx) => {
         key: string,
         confidence: number,
         method: string,
-        isPrimary: boolean,
+        isPrimary: boolean
       ): void => {
         const episodeId = episodeIdByKey.get(key)
         if (episodeId === undefined) {
@@ -455,8 +477,17 @@ export const run: Stage['run'] = async (ctx) => {
         seen.add(pair)
         const airMs = epAirMs.get(key)
         const relation =
-          airMs !== undefined && startedAtMs >= airMs - DAY_MS && startedAtMs <= airMs + windowMs ? 'live' : 'retro'
-        teRows.push({ thread_id: threadId, episode_id: episodeId, relation, confidence, method, is_primary: isPrimary })
+          airMs !== undefined && startedAtMs >= airMs - DAY_MS && startedAtMs <= airMs + windowMs
+            ? 'live'
+            : 'retro'
+        teRows.push({
+          thread_id: threadId,
+          episode_id: episodeId,
+          relation,
+          confidence,
+          method,
+          is_primary: isPrimary,
+        })
       }
 
       for (const t of threadRows) {
@@ -474,7 +505,14 @@ export const run: Stage['run'] = async (ctx) => {
         } else {
           const top = candidates.get(t.threadKey)?.candidates[0]
           if (top && top.score >= 4) {
-            add(threadId, startedAtMs, top.key, Math.min(90, Math.round(top.score * 12)), 'heuristic', true)
+            add(
+              threadId,
+              startedAtMs,
+              top.key,
+              Math.min(90, Math.round(top.score * 12)),
+              'heuristic',
+              true
+            )
           }
         }
       }
@@ -482,9 +520,11 @@ export const run: Stage['run'] = async (ctx) => {
         onConflict: 'ON CONFLICT (thread_id, episode_id) DO NOTHING',
       })
       return { rows: teRows.length, unknownKeys }
-    }),
+    })
   )
-  ctx.log(`load thread_episode: ${step6.rows} rows, ${step6.unknownKeys} unknown keys (${timings['thread_episode']}ms)`)
+  ctx.log(
+    `load thread_episode: ${step6.rows} rows, ${step6.unknownKeys} unknown keys (${timings['thread_episode']}ms)`
+  )
 
   // ── Step 7: archive rollups ─────────────────────────────────────────────────
   await timed('archive_counts', () =>
@@ -497,9 +537,9 @@ export const run: Stage['run'] = async (ctx) => {
            first_post_at = (SELECT min(posted_at) FROM message WHERE archive_id = $1),
            last_post_at  = (SELECT max(posted_at) FROM message WHERE archive_id = $1)
          WHERE id = $1`,
-        [archiveId],
+        [archiveId]
       )
-    }),
+    })
   )
   ctx.log(`load archive_counts (${timings['archive_counts']}ms)`)
 

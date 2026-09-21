@@ -4,7 +4,6 @@
   "type": "module",
   "sideEffects": false,
   "scripts": {
-    "init": "bun scripts/init.ts",
     "dev": "bun --watch server.ts",
     "pipeline": "bun pipeline/cli.ts",
     "test": "bun test pipeline",

@@ -1,178 +1,131 @@
-# alt-tv-rewind — CliffNotes
+# alt.tv.rewind — CliffNotes
 
 > Living map of the project. Read this before any coding session.
-> Last updated: 2026-09-11. Deep briefing → `CLAUDE.md` · human quickstart → `README.md`.
+> Last updated: 2026-09-21. Visual language → `ui.md` · settled choices → `decisions.md` · task log → `updates.md`.
 
 ## What this is
 
-An SSR React starter template — clone it, run `bun run init <name>`, and build a real product on top. The whole point is a _minimal but bulletproof_ base: Express 5 + Vite SSR, React Router 7, tRPC, Prisma 7, better-auth, Tailwind v4/shadcn. Keep files minimal; add features, don't gold-plate the scaffolding.
+A public archive that lines up 1990s–2000s Usenet `alt.tv.*` newsgroups against the original air dates of the show they discuss. Click an episode → see what the newsgroup said the morning after it aired: thread volume by day, the biggest threads, the loved/hated/prediction/theory buckets, the best pull quotes, then everything posted about it in the years since. Generic across shows: one registry, one command adds a newsgroup. Built on sal-starter (Bun · Express 5 + Vite SSR · React Router 7 · tRPC 11 · Prisma 7 · Tailwind 4 · better-auth).
 
-## Quick Reference
+Repo: https://github.com/dested/alt-tv-rewind · dev: http://localhost:7485
 
-- **Dev:** `bun run dev` (http://localhost:3000 — HMR websocket shares that port)
-- **New project:** `bun run init <name>` then `createdb <name>` → `bun run db:push` → `bun run dev`
-- **Entry point:** `server.ts` (Express; same file dev + prod) → SSR via `src/entry-server.tsx`; client hydrates via `src/index.tsx`
-- **Type-check:** `bun run typecheck` (`tsgo --noEmit`)
-- **Build:** `bun run build` → `dist/client` + `dist/server`
-- **Test:** `bun run test:e2e` (Playwright; isolated DB `alt_tv_rewind_test` on :3100, committed screenshots)
-- **Health:** `GET /healthz` (pings the DB)
-- **Day-one fact:** server-only code lives in `./server/` — never import it from `src/*.tsx` except `import type` (it'd ship to the browser / leak secrets).
+## Quick reference
 
-## Stack
-
-| Layer             | Choice                          | Notes                                                                                     |
-| ----------------- | ------------------------------- | ----------------------------------------------------------------------------------------- |
-| Runtime / pkg mgr | Bun ≥ 1.3                       | dev + prod                                                                                |
-| Server            | **Express 5** + Vite SSR        | required for `*splat` route wildcards                                                     |
-| Routing           | React Router 7                  | `createBrowserRouter` (client) / `createStaticHandler` (server); explicit `RouteObject[]` |
-| State / data      | TanStack Query + tRPC v11       | `@trpc/tanstack-react-query` (`.queryOptions()`)                                          |
-| API               | tRPC, Express mounts            | `/api/trpc`, `/api/auth/*`, `/healthz`                                                    |
-| Database / ORM    | Postgres + Prisma 7             | `pg` driver adapter (`@prisma/adapter-pg`)                                                |
-| Auth              | better-auth                     | email + password, autoSignIn                                                              |
-| Styling           | Tailwind v4 + shadcn (new-york) | CSS-first, oklch tokens; see `ui.md`                                                      |
-| Tests             | Playwright                      | `e2e/` + committed `__screenshots__` baselines                                            |
-| Deploy            | Render.com blueprint            | `runtime: node` + `BUN_VERSION`                                                           |
+- **Dev:** `bun run dev` → http://localhost:7485 (HMR shares the port). Never 3000.
+- **Typecheck:** `bun run typecheck` (`tsgo --noEmit`) — a task is not done while it's red.
+- **Pipeline tests:** `bun test` (= `bun test pipeline`).
+- **DB:** Postgres `alt_tv_rewind`, **migrations only** (`bun run db:migrate` dev / `db:deploy` prod). `prisma db push` is forbidden — it cannot see the FTS trigger. Prisma refuses `migrate reset` under Claude Code; reset with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` via psql then `db:deploy`.
+- **Add a show:** `bun run pipeline add-show alt.tv.frasier --name "Frasier" [--slug frasier] [--tvmaze "Frasier"] [--no-ingest]` — downloads the archive.org mbox, resolves TVMaze, registers in `data/shows.json`, runs the full ingest.
+- **Re-run stages:** `bun run pipeline ingest <slug> [--from <stage>] [--only a,b,c] [--force]`.
+- **Env (`.env`, gitignored):** `DATABASE_URL`, `BETTER_AUTH_URL=http://localhost:7485`, `BETTER_AUTH_SECRET`, `PORT=7485`, `ALLOW_SIGNUP=false`, `TYPESAFE_API_KEY` (classify), `ANTHROPIC_API_KEY` (enrich/recap). Keys are never printed or committed.
+- **Health:** `GET /healthz`.
+- **Server-only code lives in `./server/` and `./pipeline/`** — never import from `src/*` except `import type`.
 
 ## Directory structure
 
 ```
-server.ts                Express entry: request logging, /healthz, auth + tRPC mounts,
-                         vite (dev) / static+SSR (prod), startup banner. Dev AND prod.
+server.ts                    Express entry (dev + prod): /healthz, auth + tRPC mounts, Vite SSR
 server/
-├── env.ts               zod-validated env, parsed at import (throws → no boot)
-├── logger.ts            ANSI request logger, startup banner, formatError
-├── prisma.ts            PrismaClient singleton (HMR-safe) via pg adapter
-├── auth.ts              better-auth instance + Session type
-├── trpc.ts              createContext + initTRPC + public/protectedProcedure
-└── router.ts            appRouter (me, posts.list, posts.create) + AppRouter type
-src/
-├── index.tsx            client entry — hydrateRoot + createBrowserRouter
-├── entry-server.tsx     SSR entry — createStaticHandler.query + renderToString, returns {html,status,dehydratedState}
-├── App.tsx              providers: QueryClientProvider + HydrationBoundary + TRPCProvider
-├── app/
-│   ├── routes.tsx       RouteObject[] tree + loaders (root/dashboard/redirectIfSignedIn)
-│   ├── layout.tsx       nav + <Outlet/>; sign-out lives here
-│   ├── error-boundary.tsx  root ErrorBoundary → 404 / error UI
-│   ├── home.tsx         /
-│   ├── sign-in.tsx      /sign-in
-│   ├── sign-up.tsx      /sign-up
-│   └── dashboard.tsx    /dashboard (protected; posts list + create form)
-├── components/
-│   ├── theme-toggle.tsx light/dark toggle (nav); icons swapped via `dark:` so SSR markup matches
-│   └── ui/              shadcn primitives (button, card, input, label)
+├── env.ts                   zod env (ALLOW_SIGNUP string→boolean; API keys optional)
+├── auth.ts                  better-auth, disableSignUp unless ALLOW_SIGNUP — admin only
+├── prisma.ts · trpc.ts · logger.ts
+├── router.ts                appRouter = { shows, episodes, threads, search, posters, admin }
+└── routers/
+    ├── shared.ts            ThreadCard type + threadCardSelect + mapThreadCards; daysBetweenAirAndPost (ET calendar days); iso()
+    ├── shows.ts             list · get (seasons, archive, topEpisodes, mostLoved/Hated) · timeline · thenVsNow · phrases
+    ├── episodes.ts          list(slug, season) · get(slug, episode) → episode, breakdown, reactionByDay (−1..+14), quotes, prev/next
+    ├── threads.ts           byEpisode(episodeId, relation, filter, sort, cursor) · get(id) → thread + messages · latest
+    ├── search.ts            query — websearch_to_tsquery + ts_headline (U+0001/2 markers → <mark> client-side)
+    ├── posters.ts           get(id) · top(slug) · prophets(slug)
+    └── admin.ts             setThreadEpisode · setThreadSpam · setThreadClassification (protected)
+pipeline/                    offline ingest; every stage reads/writes JSONL checkpoints in data/work/<slug>/
+├── cli.ts                   ingest | add-show | download
+├── add-show.ts · download.ts (archive.org usenet-alt/<group>.mbox.zip, yauzl)
 ├── lib/
-│   ├── auth-client.ts   better-auth React client
-│   ├── theme.ts         theme state — applyTheme/setTheme/toggleTheme/followSystemTheme (mirrors index.html script)
-│   ├── trpc.tsx         TRPCProvider + useTRPC + getBrowserClients() (lazy browser QueryClient/tRPC singletons)
-│   └── utils.ts         cn()
-└── styles/app.css       Tailwind v4 import + shadcn oklch tokens (:root light, .dark dark, color-scheme per theme)
-public/                  favicon.svg, robots.txt (served by vite dev / express static prod)
-e2e/                     smoke.spec.ts, global-setup.ts (truncates test DB), __screenshots__/
-scripts/init.ts          clone→rename initializer
-index.html               SSR template — stylesheet <link>, pre-paint theme script, <!--app-html--> + <!--app-state-->
-prisma/schema.prisma     User / Session / Account / Verification + Post
-prisma.config.ts         Prisma 7 CLI config; loads .env itself (Bun/Prisma don't)
-render.yaml              Render blueprint (web service + managed Postgres)
+│   ├── types.ts             zod contracts for every checkpoint record + STAGES + StageContext
+│   ├── context.ts           ROOT/DATA_DIR, registry load/save, buildContext
+│   ├── mbox.ts · mime.ts · normalize.ts (parseDate → {iso, dateOnly}) · spam.ts · text.ts · jwz.ts (threading)
+│   ├── tvmaze.ts · episode-index.ts · scoring.ts (attribution)
+│   ├── thread-text.ts       ThreadInput: opener + ≤4 early replies, sig-cut, truncated (shared by classify/enrich)
+│   ├── jev.ts               Jev question set + state + toClassification
+│   ├── claude.ts            Anthropic client, EnrichOutput (zod v4), prompts, structured-output probe
+│   ├── checkpoint.ts · db.ts
+│   └── *.test.ts            bun tests (66)
+└── stages/
+    parse → thread → episodes → attribute → classify → enrich → load → stats → recap
+data/
+├── shows.json               registry: {slug, name, newsgroup, tvmazeQuery, tvmazeId, liveWindowDays}
+├── shows/<slug>/            episodes.json (TVMaze snapshot) · aliases.json (title → nicknames) · phrases.json (catchphrase regexes)
+├── archives/                *.mbox (gitignored)
+└── work/<slug>/             checkpoints + *-summary.json (gitignored)
+src/
+├── app/
+│   ├── routes.tsx           RouteObject[] + loaders (SSR ctx / getBrowserClients(); isNotFound → 404)
+│   ├── layout.tsx           wordmark, show switcher, People, in-show search, admin sign-out
+│   ├── home.tsx · show.tsx · season.tsx · episode.tsx · thread.tsx · search.tsx · people.tsx · poster.tsx · sign-in.tsx
+│   └── error-boundary.tsx
+├── components/
+│   ├── episode-card · thread-card · reaction-curve · volume-timeline · then-vs-now · phrase-grid · sparkline
+│   ├── filter-tabs · message-body · badge · stat-row · stat-line · admin-fix-episode · theme-toggle · ui/
+├── lib/
+│   ├── format.ts            ALL dates go through here (America/New_York, en-US); relativeToAir(hours, days, postedAt)
+│   ├── taxonomy.ts          KIND / SENTIMENT / PREDICTION_OUTCOME glyph maps, EPISODE_FILTERS — the only place emoji live
+│   ├── api-types.ts         RouterOutputs / ThreadCard / EpisodeCard
+│   ├── snippet.ts · thread-tree.ts · trpc.tsx · auth-client.ts · theme.ts · utils.ts
+└── styles/app.css           warm-paper tokens, --brand, .usenet / .usenet-quote / .usenet-sig, mark
+prisma/schema.prisma + migrations/   see Data model
+e2e/                         Playwright smoke (stale — still the starter's sign-up/dashboard flow)
 ```
-
-## File map (concept → path)
-
-| Concept / task                    | Location                                                      |
-| --------------------------------- | ------------------------------------------------------------- |
-| App providers                     | `src/App.tsx`                                                 |
-| Routing + loaders                 | `src/app/routes.tsx`                                          |
-| New page component                | `src/app/<name>.tsx`                                          |
-| 404 / error UI                    | `src/app/error-boundary.tsx`                                  |
-| tRPC procedures                   | `server/router.ts`                                            |
-| tRPC context / procedure builders | `server/trpc.ts`                                              |
-| DB schema                         | `prisma/schema.prisma`                                        |
-| Auth config                       | `server/auth.ts` (server) · `src/lib/auth-client.ts` (client) |
-| HTTP mounts / SSR / 404 logic     | `server.ts`                                                   |
-| Logging                           | `server/logger.ts`                                            |
-| Env vars                          | `server/env.ts` + `.env.example` + `render.yaml`              |
-| Design tokens                     | `src/styles/app.css` (see `ui.md`)                            |
-| Theme (dark mode)                 | `index.html` (pre-paint script) · `src/lib/theme.ts` · `src/components/theme-toggle.tsx` |
-| Browser query/tRPC singletons     | `src/lib/trpc.tsx` (`getBrowserClients()`)                    |
-| E2E tests                         | `e2e/*.spec.ts`                                               |
 
 ## Routes / URLs
 
-Routes are explicit in `src/app/routes.tsx` (no file-based routing). All page routes nest under the root `Layout`.
+| Route                                 | Page                                                                                                                                                   | Data                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| `/`                                   | show picker                                                                                                                                            | `shows.list`                           |
+| `/:show`                              | show home: timeline, seasons, most discussed, loved/hated then, then-vs-now, catchphrases                                                              | `shows.get/timeline/thenVsNow/phrases` |
+| `/:show/season/:n`                    | season table                                                                                                                                           | `episodes.list`                        |
+| `/:show/:episode`                     | **the page** — hero, recap, stat line, reaction-by-day, filter tabs, live threads ("The morning after"), best quotes, retro threads ("Over the years") | `episodes.get`, `threads.byEpisode`    |
+| `/:show/thread/:id`                   | thread reader — tree, collapse, in-reply-to anchors, badges, admin fix panel                                                                           | `threads.get`                          |
+| `/:show/search?q=&season=&from=&to=`  | FTS results grouped by thread                                                                                                                          | `search.query`                         |
+| `/:show/people` · `/:show/people/:id` | most prolific · prophets · poster profile                                                                                                              | `posters.*`                            |
+| `/sign-in`                            | admin only                                                                                                                                             | better-auth                            |
 
-| Route         | Serves                | File                             | Loader                                   |
-| ------------- | --------------------- | -------------------------------- | ---------------------------------------- |
-| `/`           | Landing               | `src/app/home.tsx`               | `rootLoader` (session)                   |
-| `/sign-in`    | Sign in               | `src/app/sign-in.tsx`            | `redirectIfSignedIn`                     |
-| `/sign-up`    | Sign up               | `src/app/sign-up.tsx`            | `redirectIfSignedIn`                     |
-| `/dashboard`  | Protected app         | `src/app/dashboard.tsx`          | `dashboardLoader` (redirects + prefetch) |
-| `/healthz`    | DB health JSON        | `server.ts`                      | —                                        |
-| `/api/auth/*` | better-auth           | `server.ts` (`toNodeHandler`)    | —                                        |
-| `/api/trpc/*` | tRPC                  | `server.ts` → `server/router.ts` | —                                        |
-| unmatched GET | 404 page (status 404) | `error-boundary.tsx`             | —                                        |
+Episode slugs look like `s07e24-the-invitations`. Thread ids are DB ids.
 
-## Architecture
+## Pipeline
 
-Browser ↔ Express 5 (`server.ts`) ↔ Postgres. One Express server runs in dev (Vite middleware + `ssrLoadModule`) and prod (static `dist/client` + built `dist/server/entry-server.js`), gated on `NODE_ENV`. SSR: `render(req)` builds a Fetch Request, runs `createStaticHandler(routes).query()` to execute loaders (session + tRPC prefetch happen here), `renderToString`s with `<StaticRouterProvider>`, and dehydrates the QueryClient into `window.__SSR_STATE__`. The client rehydrates that cache, so `useQuery` has data on first paint. The SSR-side tRPC options proxy calls procedures **directly** (no HTTP). Client-side navigations prefetch the same way through `getBrowserClients()` in the loader's browser branch, so there is no "Loading…" flash either way. The stylesheet is a `<link>` in `index.html` (render-blocking in dev, hashed in prod) and the theme class is applied by an inline `<head>` script before first paint — no unstyled or wrong-theme flash. In dev, Vite's HMR websocket shares the Express `http.Server` (one port).
+Stages run in order; each skips when its checkpoint exists unless `--force`. Times are Seinfeld (157k messages).
+
+| Stage           | Reads → writes                               | Notes                                                                                                                                                                                                                                                                                                           |
+| --------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| parse (10s)     | mbox → `parsed.jsonl`                        | mboxo, RFC 2047/QP/base64, charset sniff, spam heuristics, `posterKey` = sha256(email)[:16]. `Date:` without a clock (61% of 1995–2000 Seinfeld) → noon UTC + `dateOnly: true`.                                                                                                                                 |
+| thread (2s)     | → `threaded.jsonl`, `threads.jsonl`          | JWZ on References/In-Reply-To; subject merge only within 30 days; `startedDateOnly`.                                                                                                                                                                                                                            |
+| episodes        | TVMaze → `data/shows/<slug>/episodes.json`   | cached snapshot; specials skipped.                                                                                                                                                                                                                                                                              |
+| attribute (25s) | → `candidates.jsonl`                         | air-date window + title/alias scoring, ≤6 candidates; `inLiveWindow`.                                                                                                                                                                                                                                           |
+| classify        | Jev → `classified.jsonl` (append, resumable) | one `systemOne` call per non-spam thread: episode (choice over the roster), kind, sentiment, hot_take, spam, pull_quote. 16-way, 18 req/s, ~7.5k tokens/req, ~$10 per 33k threads. `CLASSIFY_DRY_RUN=1`, `CLASSIFY_LIMIT=n`. Shows with >254 episodes get a per-thread roster (candidates + most recent aired). |
+| enrich          | Haiku 4.5 batches → `enriched.jsonl`         | summary + prediction claim/outcome for qualifying threads (~⅓); cached system prompt; `output_config` structured output with strict-tool fallback.                                                                                                                                                              |
+| load (65s)      | everything → Postgres                        | raw `pg` unnest inserts; `--force` re-loads the show.                                                                                                                                                                                                                                                           |
+| stats (65s)     | SQL                                          | episode/season/poster counters, `usenetScore`, `controversy`, daily_volume, phrases.                                                                                                                                                                                                                            |
+| recap           | Opus 5 → `Episode.recap`                     | one paragraph per episode from its live threads; low effort.                                                                                                                                                                                                                                                    |
 
 ## Data model
 
-`prisma/schema.prisma` — better-auth's required models (`User`, `Session`, `Account`, `Verification`) mapped to lowercase tables via `@@map`; fields are camelCase (better-auth queries by name) with snake_case `@map` columns. App model: `Post` (id, title, content, `authorId` → User `onDelete: Cascade`, createdAt). FK relations to `User` should cascade.
+`Show` → `Season` → `Episode` (airDate, airStamp, live/retro counters, usenetScore, recap) ← `ThreadEpisode` (relation live|retro, confidence, method heuristic|llm|manual, isPrimary) → `Thread` (subject, startedAt, startedDateOnly, counters, kind, sentiment, hotTake, controversy, summary, pullQuote, prediction\*) → `Message` (postedAt, dateOnly, body, depth, parentId, `search` tsvector by trigger, GIN). `Poster` (key, displayName only — email never stored). `Archive`, `DailyVolume`, `Phrase`, `PhraseMonthly`. Enums: `ThreadKind`, `Sentiment`, `PredictionOutcome`, `EpisodeRelation`.
 
-## Systems
+**Live** = thread started in `[airDate − 1d, airDate + Show.liveWindowDays]` (ET calendar days). Everything else attributed is **retro**.
 
-### Auth (better-auth)
+## Hard rules
 
-Email + password, `autoSignIn` on sign-up. Client (`auth-client.ts`) → `/api/auth/*` (`toNodeHandler`, mounted before `express.json`). SSR reads the session once per request; loaders get it via `requestContext`; the root loader returns `{ session }`, read with `useRouteLoaderData('root')`. **Lives in:** `server/auth.ts`, `src/lib/auth-client.ts`, `src/app/{sign-in,sign-up,layout}.tsx`. Sign-in/up/out all call `revalidator.revalidate()` so the nav reflects the new session.
-
-### tRPC
-
-`publicProcedure` / `protectedProcedure` (401 without session). Context attaches the session from request headers. **Lives in:** `server/trpc.ts`, `server/router.ts`, `src/lib/trpc.tsx`.
-
-### Theme (dark mode)
-
-`.dark` on `<html>` switches the oklch tokens; `color-scheme` follows so form controls/scrollbars match. Resolution order: `localStorage.theme` (`'light'|'dark'`) → `prefers-color-scheme`. The inline script in `index.html` applies it before first paint; `src/lib/theme.ts` handles toggles (`toggleTheme`) and OS changes while no explicit choice is stored (`followSystemTheme`, called once in `index.tsx`). `ThemeToggle` (nav) renders both icons and hides one with `dark:` so server and client markup are identical. **Lives in:** `index.html`, `src/lib/theme.ts`, `src/components/theme-toggle.tsx`, `src/styles/app.css`.
-
-### Logging & errors
-
-Dependency-free ANSI logger: one line per request (method · status · path · timing), startup banner, `formatError`. Loader/render errors and unmatched routes render the root `ErrorBoundary`. **Lives in:** `server/logger.ts`, `src/app/error-boundary.tsx`.
-
-## Common tasks (how to modify)
-
-### Add a route
-
-1. Create `src/app/<name>.tsx` exporting `<NamePage>`.
-2. Add `{ path: '<name>', Component: NamePage }` to `routes.tsx` (add a `loader` for auth/data).
-
-### Add a tRPC procedure
-
-Add to `appRouter` in `server/router.ts`; pick public/protected; validate input with zod; return JSON-safe data (dates → ISO strings).
-
-### Add a DB table
-
-Edit `prisma/schema.prisma` → `bun run db:push` → `bun run db:generate` → use `prisma.x` in procedures.
-
-### Add an e2e test
-
-Add `e2e/*.spec.ts`; screenshot only stable views; `bun run test:e2e:update` to write baselines.
-
-## Gotchas & hard rules
-
-- **Path alias `~/*` → `src/*`** (client only); server uses relative imports.
-- **`./server/*` is server-only** — import into `src/*` only as `import type`.
-- **Express 5 required** — `*splat` wildcards break on Express 4 (symptom: `/api/auth/*` 404s, auth dead).
-- **`.env` loading**: Bun loads `.env` only into its own runtime, not the Prisma CLI (Node subprocess); Prisma 7 dropped auto-loading — `prisma.config.ts` loads it manually. Keep that block.
-- **Run `bun run db:generate` after schema edits** (auto-runs on `bun install`).
-- **JSON-safe tRPC returns** — convert `Date` → ISO string at the procedure, or SSR/hydration markup diverges.
-- **Stylesheet is a `<link>` in `index.html`** — never `import` CSS from a component (Vite injects it after the module graph loads → unstyled flash in dev). `@import` new CSS from `app.css`.
-- **Theme script and `theme.ts` must stay in sync**; never branch on theme in render (use `dark:` classes) or hydration mismatches.
-- **New data routes prefetch in both loader branches** — SSR via `ctx.trpc`, client via `getBrowserClients()` — or the page flickers on client nav.
-- **HMR has no fixed port** — it shares the Express server; giving it one collides with other clones running locally.
-- **shadcn has no `asChild`** (no `@radix-ui/react-slot`) — style a `Link` with `buttonVariants()`.
-- **No `tailwind.config`** — Tailwind v4, tokens in `app.css`.
-- Use `log.*` from `server/logger.ts`, not raw `console.log`, in server code.
+- **Day resolution is a first-class state.** Anything that shows a time must pass `dateOnly` (`formatDateTime(iso, dateOnly)`, `relativeToAir(hours, days, postedAt)`). Reaction analysis is per ET calendar day, never per hour.
+- **All date formatting goes through `src/lib/format.ts`** (fixed locale + zone) or SSR and hydration diverge.
+- **Emoji only as category glyphs from `taxonomy.ts`.** No eyebrows above headings; no terminal periods in headings (`ui.md`).
+- **Never `any`, no `as` to paper over mismatches**; zod at every boundary (checkpoints, LLM output, env).
+- **Migrations only**; the FTS trigger `message_search_update()` strips quoted lines (`^[ \t]*(>|\|)`) — `search.ts` mirrors that regexp in `ts_headline`.
+- **Never commit `.env`, `data/archives/`, `data/work/`.**
+- LLM stages are resumable by append; `--force` truncates. Don't run a `--force` smoke test while a real run is appending to the same file.
 
 ## Status
 
-- **Done** — SSR + hydration (server and client-nav prefetch), auth (email/pw), tRPC posts demo, logging, /healthz, 404/error handling, favicon/robots, flash-free dark mode + toggle, scroll restoration, immutable asset caching, init script, Playwright e2e + screenshot baselines, Render blueprint. Express 5 + Prisma 7.
-- **Not built** — email verification, OAuth providers, rate limiting, migrations workflow (uses `db push`), CI.
-- **Next:** whatever the cloned product needs — this is a base.
+- **Done:** schema + 4 migrations; full pipeline; all routers; all pages; Seinfeld loaded (157,386 messages / 33,550 threads / 180 episodes).
+- **In flight (2026-09-21):** Seinfeld classify → enrich → reload → stats → recap; Simpsons (135k msgs, 803 eps), King of the Hill, Friends ingesting (no LLM stages yet).
+- **Not built:** e2e refresh, prod deploy (owner: drydock), the other 19 archive.org groups, finale live-replay / on-this-day / digest ideas.
