@@ -4,7 +4,7 @@ import { existsSync, writeFileSync } from 'node:fs'
 import type { Stage } from '../lib/types'
 import { fetchShowById, fetchShowByQuery, normalizeEpisodes } from '../lib/tvmaze'
 import { loadRegistry, saveRegistry } from '../lib/context'
-import { writeJson } from '../lib/checkpoint-reader'
+import { writeJson } from '../lib/checkpoint'
 
 function ensureFile(path: string, contents: string): void {
   if (!existsSync(path)) writeFileSync(path, contents)

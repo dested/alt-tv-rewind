@@ -116,13 +116,34 @@ const MONTHS: Record<string, number> = {
 const MIN_MS = Date.UTC(1980, 0, 1)
 const MAX_MS = Date.UTC(2030, 0, 1)
 
-function tryParseDateString(raw: string): string | null {
+export type ParsedDate = { iso: string; dateOnly: boolean }
+
+// Google's export reduced most 1995–2000 headers to `Date: 1996/05/17`. Those
+// become 12:00:00Z of that day (never local midnight — the old Date.parse
+// path made the result depend on the machine's zone) and are flagged.
+const DATE_ONLY = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/
+// A time-of-day with no zone token anywhere after it → RFC says treat as UTC;
+// Date.parse would use the local zone, so pin it explicitly.
+const HAS_TIME = /\d{1,2}:\d{2}/
+const HAS_ZONE = /(?:[+-]\d{4}|\b(?:UT|UTC|GMT|Z|[A-Z]{3,5})\b)\s*$/
+
+function tryParseDateString(raw: string): ParsedDate | null {
   const cleaned = raw
     .replace(/\([^)]*\)/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
   if (cleaned === '') return null
-  let ms = Date.parse(cleaned)
+  const dateOnly = cleaned.match(DATE_ONLY)
+  if (dateOnly) {
+    const y = Number(dateOnly[1])
+    const mo = Number(dateOnly[2])
+    const d = Number(dateOnly[3])
+    const ms = Date.UTC(y, mo - 1, d, 12)
+    if (Number.isNaN(ms) || ms < MIN_MS || ms >= MAX_MS) return null
+    return { iso: new Date(ms).toISOString(), dateOnly: true }
+  }
+  if (!HAS_TIME.test(cleaned)) return null
+  let ms = Date.parse(HAS_ZONE.test(cleaned) ? cleaned : `${cleaned} GMT`)
   if (Number.isNaN(ms)) {
     const m = cleaned.match(
       /^(?:[A-Za-z]{3},?\s*)?(\d{1,2})\s+([A-Za-z]{3})\.?\s+(\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([+-]\d{4}|[A-Z]{1,5})?/
@@ -163,17 +184,30 @@ function tryParseDateString(raw: string): string | null {
     ms = Date.UTC(year, mon, day, hour, min, sec) - offsetMin * 60000
   }
   if (Number.isNaN(ms) || ms < MIN_MS || ms >= MAX_MS) return null
-  return new Date(ms).toISOString()
+  return { iso: new Date(ms).toISOString(), dateOnly: false }
 }
 
-export function parseDate(h: Headers): string | null {
+const DAY_MS = 86_400_000
+
+// `Date` wins, except that a date-only `Date` yields to a timed posting-date
+// header for the same day (±1 day for zone slop) — that recovers the hour for
+// the later years where servers stamped it.
+export function parseDate(h: Headers): ParsedDate | null {
+  const candidates: ParsedDate[] = []
   for (const name of ['date', 'nntp-posting-date', 'injection-date']) {
     const raw = header(h, name)
     if (raw === null) continue
-    const iso = tryParseDateString(raw)
-    if (iso !== null) return iso
+    const parsed = tryParseDateString(raw)
+    if (parsed !== null) candidates.push(parsed)
   }
-  return null
+  const first = candidates[0]
+  if (first === undefined) return null
+  if (!first.dateOnly) return first
+  const firstMs = Date.parse(first.iso)
+  const timed = candidates.find(
+    (c) => !c.dateOnly && Math.abs(Date.parse(c.iso) - firstMs) <= DAY_MS * 1.5
+  )
+  return timed ?? first
 }
 
 export function parseMessageIdList(s: string | null): string[] {

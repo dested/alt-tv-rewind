@@ -9,13 +9,14 @@ import { z } from 'zod'
 import {
   CandidateRecord,
   ClassifiedRecord,
+  EnrichedRecord,
   EpisodesFile,
   ThreadRecord,
   ThreadedMessage,
   type Stage,
 } from '../lib/types'
 import { insertRows, inTransaction, type ColumnSpec } from '../lib/db'
-import { checkpointExists, readJsonl, writeJson } from '../lib/checkpoint-reader'
+import { checkpointExists, readJsonl, writeJson } from '../lib/checkpoint'
 
 const DAY_MS = 86_400_000
 
@@ -63,6 +64,7 @@ const threadCols: ColumnSpec[] = [
   { name: 'poster_count', type: 'int' },
   { name: 'max_depth', type: 'int' },
   { name: 'is_spam', type: 'boolean' },
+  { name: 'started_date_only', type: 'boolean' },
   { name: 'kind', type: 'ThreadKind' },
   { name: 'sentiment', type: 'Sentiment' },
   { name: 'hot_take', type: 'boolean' },
@@ -86,6 +88,7 @@ const messageCols: ColumnSpec[] = [
   { name: 'body', type: 'text' },
   { name: 'line_count', type: 'int' },
   { name: 'is_spam', type: 'boolean' },
+  { name: 'date_only', type: 'boolean' },
 ]
 
 const teCols: ColumnSpec[] = [
@@ -113,6 +116,10 @@ export const run: Stage['run'] = async (ctx) => {
   const classified = new Map<string, ClassifiedRecord>()
   const classPath = join(work, 'classified.jsonl')
   if (checkpointExists(classPath)) for await (const r of readJsonl(classPath, ClassifiedRecord)) classified.set(r.threadKey, r)
+
+  const enriched = new Map<string, EnrichedRecord>()
+  const enrichedPath = join(work, 'enriched.jsonl')
+  if (checkpointExists(enrichedPath)) for await (const r of readJsonl(enrichedPath, EnrichedRecord)) enriched.set(r.threadKey, r)
 
   const timings: Record<string, number> = {}
   const timed = async <T>(label: string, fn: () => Promise<T>): Promise<T> => {
@@ -279,6 +286,9 @@ export const run: Stage['run'] = async (ctx) => {
       const rows = threadRows.map((t) => {
         const rec = classified.get(t.threadKey)
         const cl = rec?.classification
+        const en = enriched.get(t.threadKey)
+        // Prose fields come from enrich, falling back to classify (null in both
+        // until those stages run). Spam flips on a high classifier probability.
         return {
           show_id: showId,
           archive_id: archiveId,
@@ -288,14 +298,15 @@ export const run: Stage['run'] = async (ctx) => {
           message_count: t.messageCount,
           poster_count: t.posterCount,
           max_depth: t.maxDepth,
-          is_spam: t.isSpam,
+          is_spam: t.isSpam || (cl?.spamProbability ?? 0) >= 90,
+          started_date_only: t.startedDateOnly,
           kind: cl?.kind ?? null,
           sentiment: cl?.sentiment ?? null,
           hot_take: cl?.hotTake ?? null,
-          summary: cl?.summary ?? null,
+          summary: en?.summary ?? cl?.summary ?? null,
           pull_quote: cl?.pullQuote ?? null,
-          prediction_claim: cl?.predictionClaim ?? null,
-          prediction_outcome: cl?.predictionOutcome ?? null,
+          prediction_claim: en?.predictionClaim ?? cl?.predictionClaim ?? null,
+          prediction_outcome: en?.predictionOutcome ?? cl?.predictionOutcome ?? null,
           classified_at: cl ? now : null,
           classify_model: cl ? (rec?.model ?? null) : null,
         }
@@ -343,6 +354,7 @@ export const run: Stage['run'] = async (ctx) => {
           body: m.body,
           line_count: m.lineCount,
           is_spam: m.isSpam,
+          date_only: m.dateOnly,
         })
         if (batch.length >= 2000) await flush()
       }
@@ -395,10 +407,28 @@ export const run: Stage['run'] = async (ctx) => {
           [pqThreadIds, pqMsgIds, archiveId],
         )
       }
-      return { inserted, skipped }
+
+      // Threads the classifier flipped to spam drag their messages along, so the
+      // archive spam_count and any spam filter stay consistent.
+      const spamFlipIds: number[] = []
+      for (const t of threadRows) {
+        const tid = threadIdByKey.get(t.threadKey)
+        if (tid === undefined) continue
+        if (!t.isSpam && (classified.get(t.threadKey)?.classification.spamProbability ?? 0) >= 90) {
+          spamFlipIds.push(tid)
+        }
+      }
+      let spamFlipped = 0
+      if (spamFlipIds.length > 0) {
+        const res = await c.query('UPDATE message SET is_spam = true WHERE thread_id = ANY($1)', [spamFlipIds])
+        spamFlipped = res.rowCount ?? 0
+      }
+      return { inserted, skipped, spamFlipped }
     }),
   )
-  ctx.log(`load messages: ${step5.inserted} inserted, ${step5.skipped} skipped (${timings['messages']}ms)`)
+  ctx.log(
+    `load messages: ${step5.inserted} inserted, ${step5.skipped} skipped, ${step5.spamFlipped} spam-flipped (${timings['messages']}ms)`,
+  )
 
   // ── Step 6: thread_episode ──────────────────────────────────────────────────
   const step6 = await timed('thread_episode', () =>
@@ -482,6 +512,7 @@ export const run: Stage['run'] = async (ctx) => {
     threads: threadIdByKey.size,
     messages: step5.inserted,
     messagesSkipped: step5.skipped,
+    messagesSpamFlipped: step5.spamFlipped,
     threadEpisodes: step6.rows,
     unknownEpisodeKeys: step6.unknownKeys,
     timings,

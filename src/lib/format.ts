@@ -30,8 +30,9 @@ export function formatDate(iso: string): string {
   )
 }
 
-// ISO instant → "May 17, 1996, 9:12 AM ET"
-export function formatDateTime(iso: string): string {
+// ISO instant → "May 17, 1996, 9:12 AM ET"; date-only posts get just the date.
+export function formatDateTime(iso: string, dateOnly = false): string {
+  if (dateOnly) return formatDate(iso)
   return `${dtf({
     month: 'short',
     day: 'numeric',
@@ -64,9 +65,27 @@ function hourInAirZone(iso: string): number {
   return part ? Number(part.value) : 0
 }
 
+// Day-resolution phrasing for posts whose header carried no time of day
+// (most of 1995–2000). `daysAfterAir` is a calendar-day difference.
+function relativeByDay(days: number): string {
+  if (days < -1) return `${-days} days before it aired`
+  if (days === -1) return 'the day before it aired'
+  if (days === 0) return 'the same night'
+  if (days === 1) return 'the next day'
+  if (days < 14) return `${days} days later`
+  if (days < 60) return `${Math.round(days / 7)} weeks later`
+  if (days < 365 * 1.5) return `${Math.round(days / 30)} months later`
+  return `${Math.round(days / 365)} years later`
+}
+
 // How long after the episode aired a post landed, in editorial phrasing.
-export function relativeToAir(hoursAfterAir: number | null, postedAt: string): string | null {
-  if (hoursAfterAir === null) return null
+// Hour phrasing only when the hour is real; otherwise fall back to days.
+export function relativeToAir(
+  hoursAfterAir: number | null,
+  daysAfterAir: number | null,
+  postedAt: string
+): string | null {
+  if (hoursAfterAir === null) return daysAfterAir === null ? null : relativeByDay(daysAfterAir)
   const h = hoursAfterAir
   if (h < -24) return `${Math.round(-h / 24)} days before it aired`
   if (h < -1) return `${Math.round(-h)} hours before it aired`

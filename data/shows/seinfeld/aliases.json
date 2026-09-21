@@ -1,5 +1,5 @@
 {
-  "The Seinfeld Chronicles": ["seinfeld chronicles", "the pilot episode"],
+  "Good News, Bad News": ["seinfeld chronicles", "the pilot episode", "good news bad news"],
   "The Stakeout": ["art vandelay", "the stakeout"],
   "The Pony Remark": ["pony remark"],
   "The Chinese Restaurant": ["chinese restaurant", "cartwright"],
@@ -101,6 +101,7 @@
   "The Frogger": ["frogger"],
   "The Maid": ["the maid"],
   "The Puerto Rican Day": ["puerto rican day", "flag burning"],
-  "The Chronicle": ["the chronicle", "clip show"],
+  "The Clip Show (1) (a.k.a. The Chronicle (1))": ["the chronicle", "clip show"],
+  "The Clip Show (2) (a.k.a. The Chronicle (2))": ["the chronicle", "clip show"],
   "The Finale": ["the finale", "series finale", "final episode", "last episode", "good samaritan law", "latham"]
 }

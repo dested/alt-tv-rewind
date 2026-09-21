@@ -14,7 +14,7 @@ import {
 import { buildEpisodeIndex } from '../lib/episode-index'
 import { scoreThread, type ThreadText } from '../lib/scoring'
 import { withoutQuotedLines } from '../lib/text'
-import { checkpointExists, readJsonl, writeJson, writeJsonl } from '../lib/checkpoint-reader'
+import { checkpointExists, readJsonl, writeJson, writeJsonl } from '../lib/checkpoint'
 
 const ROOT_LIMIT = 3000
 const REPLY_LIMIT = 1500
@@ -111,7 +111,7 @@ export const run: Stage['run'] = async (ctx) => {
     }
   }
 
-  const written = await writeJsonl(candidatesPath, CandidateRecord, records())
+  const written = await writeJsonl(candidatesPath, records())
 
   topScores.sort((a, b) => b.score - a.score)
   writeJson(join(ctx.paths.work, 'attribute-summary.json'), {

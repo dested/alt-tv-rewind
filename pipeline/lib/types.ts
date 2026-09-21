@@ -81,6 +81,10 @@ export const ParsedMessage = z.object({
   fromName: z.string(), // display name only — never the address
   posterKey: z.string().length(16), // sha256 hex prefix of lowercased address, or "n:" + name hash
   postedAt: z.string().nullable(), // ISO 8601 UTC; null when no header date parses
+  // Google's export stripped the time of day from ~60% of headers (all of
+  // 1996–98): `Date: 1996/05/17`. Those parse to 12:00:00Z of that day and
+  // carry dateOnly = true so nothing downstream pretends to know the hour.
+  dateOnly: z.boolean(),
   references: z.array(z.string()), // oldest → newest, as in the References header
   inReplyTo: z.string().nullable(),
   newsgroups: z.array(z.string()),
@@ -106,6 +110,7 @@ export const ThreadRecord = z.object({
   subject: z.string(), // display subject of the earliest message, Re: stripped
   subjectNorm: z.string(),
   startedAt: z.string(),
+  startedDateOnly: z.boolean(), // the earliest message's date had no time of day
   lastPostAt: z.string(),
   messageCount: z.number().int(),
   posterCount: z.number().int(),

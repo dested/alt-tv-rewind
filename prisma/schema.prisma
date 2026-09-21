@@ -240,6 +240,9 @@ model Thread {
   rootMessageId Int?     @unique @map("root_message_id") // no FK: set after messages load
   subject       String // normalized ("Re:" stripped)
   startedAt     DateTime @map("started_at")
+  // True when the earliest message's Date header had no time of day (Google's
+  // export stripped it from most 1995–2000 posts); hour-level UI must not be shown.
+  startedDateOnly Boolean  @default(false) @map("started_date_only")
   lastPostAt    DateTime @map("last_post_at")
   messageCount  Int      @map("message_count")
   posterCount   Int      @map("poster_count")
@@ -297,7 +300,8 @@ model Message {
   depth     Int      @default(0)
   messageId String   @map("message_id") // RFC Message-ID
   subject   String
-  postedAt  DateTime @map("posted_at")
+  postedAt  DateTime @map("posted_at") // date-only headers land at 12:00:00Z of that day
+  dateOnly  Boolean  @default(false) @map("date_only")
   body      String
   lineCount Int      @default(0) @map("line_count")
   isSpam    Boolean  @default(false) @map("is_spam")
