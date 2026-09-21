@@ -38,8 +38,8 @@ export function PhraseGrid({
       {phrases.map((phrase) => {
         const values = filledMonthly(phrase.monthly)
         return (
-          <div key={phrase.slug} className="bg-card rounded-lg border p-3">
-            <div className="font-medium">{phrase.label}</div>
+          <div key={phrase.slug} className="bg-card rounded-xl border p-4">
+            <div className="font-serif text-lg font-medium">{phrase.label}</div>
             <div className="text-muted-foreground text-sm">
               {phrase.firstAt ? `first said ${formatDate(phrase.firstAt)}` : 'first said long ago'}
               {phrase.episodeSlug && (

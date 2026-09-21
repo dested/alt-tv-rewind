@@ -20,15 +20,15 @@ export function RouteErrorBoundary() {
 
   return (
     <>
-      <header className="border-b">
-        <nav className="mx-auto flex max-w-5xl items-center px-6 py-4">
-          <Link to="/" className="font-semibold">
-            alt-tv-rewind
+      <header className="border-brand border-t-2 border-b">
+        <nav className="mx-auto flex max-w-5xl items-center px-6 py-3">
+          <Link to="/" className="font-serif text-xl font-semibold tracking-tight">
+            alt.tv.rewind
           </Link>
         </nav>
       </header>
       <main className="mx-auto flex max-w-5xl flex-col items-start gap-4 px-6 py-16">
-        <h1 className="text-5xl font-bold tracking-tight">{title}</h1>
+        <h1 className="font-serif text-5xl font-semibold tracking-tight text-balance">{title}</h1>
         <p className="text-muted-foreground">{message}</p>
         {import.meta.env.DEV && error instanceof Error && error.stack && (
           <pre className="bg-muted text-muted-foreground max-w-full overflow-auto rounded-md p-4 text-xs">

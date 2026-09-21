@@ -35,7 +35,9 @@ export function HomePage() {
   return (
     <div className="space-y-8">
       <section className="space-y-3">
-        <h1 className="text-4xl font-bold tracking-tight">alt.tv.rewind</h1>
+        <h1 className="font-serif text-4xl font-semibold tracking-tight text-balance">
+          alt.tv.rewind
+        </h1>
         <p className="text-muted-foreground max-w-2xl text-lg">
           What the newsgroups said the morning after — Usenet reaction to TV episodes, lined up
           against the night they first aired.
@@ -52,14 +54,14 @@ export function HomePage() {
             <Link
               key={show.slug}
               to={`/${show.slug}`}
-              className="bg-card hover:border-foreground/30 block overflow-hidden rounded-lg border transition-colors">
+              className="bg-card hover:border-foreground/30 block overflow-hidden rounded-xl border transition-colors">
               {show.imageUrl ? (
                 <img src={show.imageUrl} alt="" className="aspect-[2/3] w-full object-cover" />
               ) : (
                 <div className="bg-secondary aspect-[2/3]" />
               )}
               <div className="space-y-1 p-4">
-                <div className="font-semibold">{show.name}</div>
+                <div className="font-serif text-xl font-medium">{show.name}</div>
                 <div className="text-muted-foreground text-sm">
                   {joinDot([yearRange(show.premiered, show.ended), show.network])}
                 </div>

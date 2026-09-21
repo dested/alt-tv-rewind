@@ -69,18 +69,20 @@ export function ThreadCard({ thread, showSlug }: { thread: ThreadCardData; showS
   }
 
   return (
-    <article className="bg-card space-y-1.5 rounded-lg border p-4">
+    <article className="bg-card space-y-2 rounded-xl border p-5">
       <div>
         <Link
           to={`/${showSlug}/thread/${thread.id}`}
-          className="leading-snug font-medium hover:underline">
+          className="font-serif text-lg leading-snug font-medium hover:underline">
           {thread.subject}
         </Link>
       </div>
       <MetaLine segments={segments} />
       {badges.length > 0 && <div className="flex flex-wrap gap-1.5">{badges}</div>}
-      {thread.predictionClaim && <p className="text-sm italic">{thread.predictionClaim}</p>}
-      {thread.summary && <p className="text-sm">{thread.summary}</p>}
+      {thread.predictionClaim && (
+        <p className="font-serif text-[0.95rem] italic">{thread.predictionClaim}</p>
+      )}
+      {thread.summary && <p className="text-muted-foreground text-sm">{thread.summary}</p>}
     </article>
   )
 }

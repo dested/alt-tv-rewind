@@ -59,7 +59,9 @@ export function PosterPage() {
     <div className="space-y-8">
       <div className="space-y-2">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{poster.displayName}</h1>
+          <h1 className="font-serif text-4xl font-semibold tracking-tight text-balance">
+            {poster.displayName}
+          </h1>
           <div className="text-muted-foreground flex flex-wrap gap-x-2 text-sm">
             {metaSegments.map((seg, i) => (
               <Fragment key={i}>
@@ -97,7 +99,7 @@ export function PosterPage() {
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Threads started</h2>
+        <h2 className="font-serif text-2xl font-semibold tracking-tight">Threads started</h2>
         {threadsStarted.length === 0 ? (
           <p className="text-muted-foreground text-sm">Never started a thread — a replier.</p>
         ) : (
@@ -111,7 +113,7 @@ export function PosterPage() {
 
       {predictions.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight">Predictions</h2>
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">Predictions</h2>
           <ul className="space-y-3">
             {predictions.map((p) => {
               const outcome = p.predictionOutcome ? PREDICTION_OUTCOME[p.predictionOutcome] : null
@@ -130,7 +132,7 @@ export function PosterPage() {
                     )}
                     <span className="text-muted-foreground">{formatDate(p.startedAt)}</span>
                   </div>
-                  <p className="text-sm italic">{p.predictionClaim}</p>
+                  <p className="font-serif text-[0.95rem] italic">{p.predictionClaim}</p>
                 </li>
               )
             })}

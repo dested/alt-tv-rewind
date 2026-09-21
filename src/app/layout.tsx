@@ -35,9 +35,9 @@ export function Layout() {
 
   return (
     <>
-      <header className="border-b">
+      <header className="border-brand border-t-2 border-b">
         <nav className="mx-auto flex max-w-5xl items-center gap-5 px-6 py-3">
-          <Link to="/" className="font-semibold tracking-tight">
+          <Link to="/" className="font-serif text-xl font-semibold tracking-tight">
             alt.tv.rewind
           </Link>
           {show && (
@@ -61,7 +61,7 @@ export function Layout() {
                 className="relative hidden sm:block"
                 role="search">
                 <Search
-                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2"
+                  className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2"
                   aria-hidden
                 />
                 <input
@@ -71,7 +71,7 @@ export function Layout() {
                   defaultValue={searchParams.get('q') ?? ''}
                   placeholder="Search the newsgroup"
                   aria-label="Search the newsgroup"
-                  className="border-input bg-card focus-visible:ring-ring/50 h-8 w-56 rounded-md border pr-3 pl-8 text-sm shadow-xs outline-none focus-visible:ring-[3px]"
+                  className="bg-secondary focus-visible:ring-ring/50 h-9 w-60 rounded-full border-0 pr-4 pl-9 text-sm outline-none focus-visible:ring-[3px]"
                 />
               </Form>
             )}
@@ -87,13 +87,13 @@ export function Layout() {
           </div>
         </nav>
       </header>
-      <main className="mx-auto max-w-5xl px-6 py-8">
+      <main className="mx-auto max-w-5xl px-6 py-10">
         <Outlet />
       </main>
       <footer className="border-t">
         <div className="text-muted-foreground mx-auto max-w-5xl px-6 py-6 text-xs leading-relaxed">
-          Newsgroup archives from the Internet Archive's usenet-alt collection · episode data
-          from TVMaze · posters are shown by display name only, never by address.
+          Newsgroup archives from the Internet Archive's usenet-alt collection · episode data from
+          TVMaze · posters are shown by display name only, never by address.
         </div>
       </footer>
       <ScrollRestoration />

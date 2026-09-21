@@ -139,11 +139,13 @@ export function ShowPage() {
             <img
               src={show.imageUrl}
               alt=""
-              className="aspect-[2/3] w-28 shrink-0 rounded-md object-cover"
+              className="aspect-[2/3] w-28 shrink-0 rounded-xl object-cover"
             />
           )}
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">{show.name}</h1>
+            <h1 className="font-serif text-4xl font-semibold tracking-tight text-balance">
+              {show.name}
+            </h1>
             <p className="text-muted-foreground text-sm">{meta}</p>
             {archiveLine && <p className="text-muted-foreground text-sm">{archiveLine}</p>}
           </div>
@@ -152,7 +154,9 @@ export function ShowPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold tracking-tight">Every post, every night</h2>
+        <h2 className="font-serif text-2xl font-semibold tracking-tight">
+          Every post, every night
+        </h2>
         <VolumeTimeline
           weeks={timeline.weeks}
           episodes={timeline.episodes}
@@ -165,10 +169,10 @@ export function ShowPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-xl font-semibold tracking-tight">Seasons</h2>
+        <h2 className="font-serif text-2xl font-semibold tracking-tight">Seasons</h2>
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-muted-foreground text-left text-xs tracking-wide uppercase">
+            <tr className="text-muted-foreground text-left text-xs">
               <th className="py-2 font-medium">Season</th>
               <th className="py-2 font-medium">Aired</th>
               <th className="py-2 font-medium">Episodes</th>
@@ -198,7 +202,7 @@ export function ShowPage() {
 
       {topEpisodes.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold tracking-tight">Most discussed</h2>
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">Most discussed</h2>
           <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
             {topEpisodes.map((e) => (
               <EpisodeCard key={e.id} episode={e} showSlug={slug} />
@@ -209,7 +213,9 @@ export function ShowPage() {
 
       {(mostLoved.length > 0 || mostHated.length > 0) && (
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold tracking-tight">Loved then, hated then</h2>
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">
+            Loved then, hated then
+          </h2>
           <div className="grid gap-8 md:grid-cols-2">
             {mostLoved.length > 0 && (
               <ScoreList episodes={mostLoved} showSlug={slug} label="Loved then" />
@@ -223,7 +229,7 @@ export function ShowPage() {
 
       {thenVsNow.length >= 5 && (
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold tracking-tight">Then vs now</h2>
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">Then vs now</h2>
           <ThenVsNow items={thenVsNow} showSlug={slug} />
           <p className="text-muted-foreground text-sm">
             Usenet score at the time against today's TVMaze rating. Labeled dots are the biggest
@@ -234,7 +240,7 @@ export function ShowPage() {
 
       {phrases.length > 0 && (
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold tracking-tight">Catchphrases</h2>
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">Catchphrases</h2>
           <PhraseGrid phrases={phrases} showSlug={slug} />
         </section>
       )}

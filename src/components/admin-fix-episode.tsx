@@ -47,7 +47,7 @@ export function AdminFixEpisode({
         id="fix-episode"
         value={selected}
         onChange={(e) => setSelected(e.target.value)}
-        className="border-input bg-card h-8 rounded-md border px-2 text-sm">
+        className="border-input bg-card h-8 rounded-lg border px-2 text-sm">
         <option value="">— none —</option>
         {episodes.map((ep) => (
           <option key={ep.slug} value={ep.slug}>

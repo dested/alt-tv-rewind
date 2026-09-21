@@ -153,23 +153,25 @@ export function EpisodePage() {
   return (
     <div className="space-y-10">
       {ep.imageUrl && (
-        <img src={ep.imageUrl} alt="" className="aspect-video w-full rounded-lg object-cover" />
+        <img src={ep.imageUrl} alt="" className="aspect-video w-full rounded-xl object-cover" />
       )}
 
       <div className="space-y-3">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">{ep.title}</h1>
-          <p className="text-muted-foreground">
+          <h1 className="font-serif text-5xl font-semibold tracking-tight text-balance">
+            {ep.title}
+          </h1>
+          <p className="text-muted-foreground text-sm">
             Season {ep.seasonNumber} · Episode {ep.number} · Aired {formatAirDate(ep.airDate)}
           </p>
         </div>
 
         {ep.recap ? (
-          <p className="border-brand max-w-[60ch] border-l-2 pl-4 text-lg leading-relaxed">
+          <p className="border-brand max-w-[62ch] border-l-2 pl-4 font-serif text-xl leading-relaxed">
             {ep.recap}
           </p>
         ) : (
-          ep.summary && <p className="text-muted-foreground max-w-[60ch]">{ep.summary}</p>
+          ep.summary && <p className="text-muted-foreground max-w-[62ch]">{ep.summary}</p>
         )}
 
         <StatLine items={stats} />
@@ -183,7 +185,7 @@ export function EpisodePage() {
       )}
 
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">The morning after</h2>
+        <h2 className="font-serif text-2xl font-semibold tracking-tight">The morning after</h2>
         <FilterTabs value={tab} counts={counts} onChange={changeTab} />
         {liveItems.length === 0 ? (
           <p className="text-muted-foreground text-sm">{liveEmpty}</p>
@@ -207,16 +209,22 @@ export function EpisodePage() {
 
       {data.quotes.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-xl font-semibold tracking-tight">Best of the morning after</h2>
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">
+            Best of the morning after
+          </h2>
           <div className="grid gap-4 md:grid-cols-2">
             {data.quotes.map((q) => {
               const when =
                 relativeToAir(q.hoursAfterAir, q.daysAfterAir, q.postedAt) ??
                 formatDateTime(q.postedAt, q.postedDateOnly)
               return (
-                <blockquote key={q.threadId} className="usenet bg-card rounded-lg border p-4">
-                  {q.pullQuote}
-                  <footer className="text-muted-foreground mt-2 font-sans text-xs">
+                <blockquote key={q.threadId} className="bg-card rounded-xl border p-5">
+                  <p className="font-serif text-xl leading-snug italic">
+                    <span className="text-brand">“</span>
+                    {q.pullQuote}
+                    <span className="text-brand">”</span>
+                  </p>
+                  <footer className="text-muted-foreground mt-3 text-xs">
                     — {q.posterName ?? 'unknown'}, {when} ·{' '}
                     <Link to={`/${showSlug}/thread/${q.threadId}`} className="hover:underline">
                       {q.subject}
@@ -230,7 +238,7 @@ export function EpisodePage() {
       )}
 
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Over the years</h2>
+        <h2 className="font-serif text-2xl font-semibold tracking-tight">Over the years</h2>
         {retroItems.length === 0 ? (
           <p className="text-muted-foreground text-sm">Nobody came back to this one later.</p>
         ) : (

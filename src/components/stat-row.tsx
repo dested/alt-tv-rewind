@@ -5,8 +5,8 @@ export function StatRow({ items }: { items: Array<{ value: string; label: string
     <div className="flex flex-wrap gap-x-10 gap-y-3">
       {items.map((item) => (
         <div key={item.label}>
-          <div className="text-2xl font-semibold tracking-tight tabular-nums">{item.value}</div>
-          <div className="text-muted-foreground text-sm">{item.label}</div>
+          <div className="font-serif text-2xl font-semibold tabular-nums">{item.value}</div>
+          <div className="text-muted-foreground text-xs">{item.label}</div>
         </div>
       ))}
     </div>

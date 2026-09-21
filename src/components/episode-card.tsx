@@ -16,14 +16,18 @@ export function EpisodeCard({ episode, showSlug }: { episode: EpisodeCardData; s
   return (
     <Link
       to={`/${showSlug}/${episode.slug}`}
-      className="bg-card hover:border-foreground/30 block overflow-hidden rounded-lg border transition-colors">
+      className="bg-card hover:border-foreground/30 block overflow-hidden rounded-xl border transition-colors">
       {episode.imageUrl ? (
-        <img src={episode.imageUrl} alt="" className="aspect-video w-full object-cover" />
+        <img
+          src={episode.imageUrl}
+          alt=""
+          className="aspect-video w-full rounded-lg object-cover"
+        />
       ) : (
-        <div className="bg-secondary aspect-video" />
+        <div className="bg-secondary aspect-video rounded-lg" />
       )}
       <div className="space-y-1 p-3">
-        <div className="leading-snug font-medium">{episode.title}</div>
+        <div className="font-serif text-base leading-snug font-medium">{episode.title}</div>
         <div className="text-muted-foreground text-xs tabular-nums">
           {code} · {formatAirDate(episode.airDate, 'short')}
         </div>

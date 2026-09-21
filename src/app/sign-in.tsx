@@ -30,9 +30,9 @@ export function SignInPage() {
 
   return (
     <div className="mx-auto max-w-sm">
-      <Card>
+      <Card className="rounded-xl">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
+          <CardTitle className="font-serif text-2xl font-semibold">Sign in</CardTitle>
           <CardDescription>Admin access for fixing episode attributions</CardDescription>
         </CardHeader>
         <CardContent>

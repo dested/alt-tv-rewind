@@ -32,9 +32,9 @@ export function PeoplePage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">People</h1>
+        <h1 className="font-serif text-4xl font-semibold tracking-tight text-balance">People</h1>
         {archive && (
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {formatNumber(archive.messageCount)} posts by the regulars of {archive.newsgroup}
           </p>
         )}
@@ -42,10 +42,10 @@ export function PeoplePage() {
 
       <div className="grid gap-8 md:grid-cols-2">
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold tracking-tight">Most prolific</h2>
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">Most prolific</h2>
           <table className="w-full text-sm tabular-nums">
             <thead>
-              <tr className="text-muted-foreground text-left text-xs tracking-wide uppercase">
+              <tr className="text-muted-foreground text-left text-xs">
                 <th className="font-medium">Name</th>
                 <th className="font-medium">Posts</th>
                 <th className="font-medium">Threads</th>
@@ -72,13 +72,13 @@ export function PeoplePage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-semibold tracking-tight">The prophets</h2>
+          <h2 className="font-serif text-2xl font-semibold tracking-tight">The prophets</h2>
           {prophets.length === 0 ? (
             <p className="text-muted-foreground text-sm">No graded predictions yet.</p>
           ) : (
             <table className="w-full text-sm tabular-nums">
               <thead>
-                <tr className="text-muted-foreground text-left text-xs tracking-wide uppercase">
+                <tr className="text-muted-foreground text-left text-xs">
                   <th className="font-medium">Name</th>
                   <th className="font-medium">Hit rate</th>
                   <th className="font-medium">Predictions</th>

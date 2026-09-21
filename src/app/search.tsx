@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTRPC } from '~/lib/trpc'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
-import { snippetToHtml } from '~/lib/snippet'
+import { redactEmails, snippetToHtml } from '~/lib/snippet'
 import { episodeCode, formatDate, formatNumber, plural } from '~/lib/format'
 
 function optionalInt(value: string | null): number | undefined {
@@ -53,9 +53,9 @@ export function SearchPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Search</h1>
+        <h1 className="font-serif text-4xl font-semibold tracking-tight text-balance">Search</h1>
         {archive && (
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             {archive.newsgroup} · {formatNumber(archive.messageCount)} posts
           </p>
         )}
@@ -127,9 +127,11 @@ export function SearchPage() {
             }
             meta.push(plural(thread.messageCount, 'post'))
             return (
-              <article key={thread.id} className="bg-card space-y-2 rounded-lg border p-4">
+              <article key={thread.id} className="bg-card space-y-2 rounded-xl border p-5">
                 <div>
-                  <Link to={`/${show}/thread/${thread.id}`} className="font-medium hover:underline">
+                  <Link
+                    to={`/${show}/thread/${thread.id}`}
+                    className="font-serif text-lg leading-snug font-medium hover:underline">
                     {thread.subject}
                   </Link>
                 </div>
@@ -142,11 +144,14 @@ export function SearchPage() {
                   ))}
                 </div>
                 {hits.map((hit) => (
-                  <div key={hit.messageId} className="usenet text-muted-foreground">
-                    <span className="text-foreground/80 font-sans text-xs">
+                  <div key={hit.messageId} className="space-y-0.5">
+                    <span className="text-muted-foreground text-xs">
                       {hit.posterName} · {formatDate(hit.postedAt)}
                     </span>
-                    <div dangerouslySetInnerHTML={{ __html: snippetToHtml(hit.snippet) }} />
+                    <div
+                      className="post text-muted-foreground text-[0.95rem]"
+                      dangerouslySetInnerHTML={{ __html: snippetToHtml(redactEmails(hit.snippet)) }}
+                    />
                   </div>
                 ))}
               </article>

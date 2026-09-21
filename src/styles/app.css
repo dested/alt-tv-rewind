@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import '@fontsource-variable/newsreader/opsz.css';
+@import '@fontsource-variable/newsreader/opsz-italic.css';
+@import '@fontsource-variable/inter/index.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -25,6 +28,8 @@
   --color-ring: var(--ring);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --font-serif: 'Newsreader Variable', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -32,56 +37,62 @@
 }
 
 /* Warm paper neutrals + one hot accent (`brand`) reserved for "live" signal:
-   air-date ticks, the reaction curve, active tabs, loved-it badges. */
+   air-date ticks, the reaction curve, active tabs, loved-it badges, the masthead
+   stripe. A 1996 TV Guide on good paper — never a terminal. */
 :root {
   color-scheme: light;
-  --radius: 0.5rem;
-  --background: oklch(0.985 0.005 85);
-  --foreground: oklch(0.17 0.012 60);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.012 60);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.012 60);
+  --radius: 0.625rem;
+  --background: oklch(0.975 0.008 85);
+  --foreground: oklch(0.18 0.015 60);
+  --card: oklch(0.995 0.004 85);
+  --card-foreground: oklch(0.18 0.015 60);
+  --popover: oklch(0.995 0.004 85);
+  --popover-foreground: oklch(0.18 0.015 60);
   --primary: oklch(0.2 0.012 60);
-  --primary-foreground: oklch(0.985 0.005 85);
-  --secondary: oklch(0.955 0.008 80);
-  --secondary-foreground: oklch(0.2 0.012 60);
-  --muted: oklch(0.955 0.008 80);
-  --muted-foreground: oklch(0.5 0.012 60);
-  --accent: oklch(0.955 0.008 80);
-  --accent-foreground: oklch(0.2 0.012 60);
+  --primary-foreground: oklch(0.975 0.008 85);
+  --secondary: oklch(0.94 0.012 80);
+  --secondary-foreground: oklch(0.18 0.015 60);
+  --muted: oklch(0.94 0.012 80);
+  --muted-foreground: oklch(0.48 0.015 60);
+  --accent: oklch(0.94 0.012 80);
+  --accent-foreground: oklch(0.18 0.015 60);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.905 0.008 80);
-  --input: oklch(0.905 0.008 80);
+  --border: oklch(0.89 0.012 80);
+  --input: oklch(0.89 0.012 80);
   --ring: oklch(0.7 0.01 60);
   --brand: oklch(0.6 0.2 32);
   --brand-foreground: oklch(0.99 0 0);
+  /* Poster avatar lightness (hue is per-poster; see posterHue). */
+  --avatar-l: 0.86;
+  --avatar-fg-l: 0.32;
 }
 
 .dark {
   color-scheme: dark;
-  --background: oklch(0.155 0.01 60);
-  --foreground: oklch(0.95 0.008 80);
-  --card: oklch(0.2 0.01 60);
-  --card-foreground: oklch(0.95 0.008 80);
-  --popover: oklch(0.2 0.01 60);
-  --popover-foreground: oklch(0.95 0.008 80);
+  --background: oklch(0.21 0.012 60);
+  --foreground: oklch(0.93 0.01 80);
+  --card: oklch(0.255 0.012 60);
+  --card-foreground: oklch(0.93 0.01 80);
+  --popover: oklch(0.255 0.012 60);
+  --popover-foreground: oklch(0.93 0.01 80);
   --primary: oklch(0.92 0.008 80);
-  --primary-foreground: oklch(0.2 0.01 60);
-  --secondary: oklch(0.26 0.01 60);
-  --secondary-foreground: oklch(0.95 0.008 80);
-  --muted: oklch(0.26 0.01 60);
-  --muted-foreground: oklch(0.7 0.01 70);
-  --accent: oklch(0.26 0.01 60);
-  --accent-foreground: oklch(0.95 0.008 80);
+  --primary-foreground: oklch(0.22 0.012 60);
+  --secondary: oklch(0.3 0.012 60);
+  --secondary-foreground: oklch(0.93 0.01 80);
+  --muted: oklch(0.3 0.012 60);
+  --muted-foreground: oklch(0.68 0.012 70);
+  --accent: oklch(0.3 0.012 60);
+  --accent-foreground: oklch(0.93 0.01 80);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --border: oklch(1 0 0 / 13%);
+  --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.55 0.01 60);
-  --brand: oklch(0.7 0.19 35);
+  --brand: oklch(0.72 0.18 35);
   --brand-foreground: oklch(0.15 0.02 35);
+  --avatar-l: 0.36;
+  --avatar-fg-l: 0.9;
 }
 
 @layer base {
@@ -89,27 +100,36 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: ui-sans-serif, system-ui, sans-serif;
+    @apply bg-background text-foreground font-sans;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
   }
 }
 
-/* Anything that came off the wire from Usenet renders in the terminal voice:
-   monospace, preserved whitespace, quote levels as rails. */
+/* The posts — their voice, set as prose in Newsreader at reading size. Quotes
+   fold to a muted rail; genuinely preformatted content stays monospace. */
 @layer components {
-  .usenet {
-    @apply font-mono text-[13px] leading-[1.5] break-words whitespace-pre-wrap;
+  .post {
+    @apply font-serif text-[1.0625rem] leading-[1.65];
   }
-  .usenet-quote {
-    @apply text-muted-foreground border-l-2 pl-3;
+  .post p + p {
+    @apply mt-3;
   }
-  .usenet-quote .usenet-quote {
-    @apply border-border/70 text-muted-foreground/80;
+  .post-quote {
+    @apply text-muted-foreground border-l-2 pl-4 text-[0.95rem];
   }
-  .usenet-sig {
-    @apply text-muted-foreground/70;
+  .post-pre {
+    @apply bg-secondary overflow-x-auto rounded-lg p-3 font-mono text-[12.5px] leading-[1.45] whitespace-pre;
   }
   mark {
     @apply bg-brand/20 text-foreground rounded-xs px-0.5;
+  }
+  /* Newsreader carries an optical-size axis; let the browser drive it. */
+  .font-serif,
+  .post {
+    font-optical-sizing: auto;
   }
 }

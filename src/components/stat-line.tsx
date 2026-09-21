@@ -4,8 +4,8 @@ export function StatLine({ items }: { items: Array<{ value: string; label: strin
     <div className="flex flex-wrap gap-x-8 gap-y-2">
       {items.map((item, i) => (
         <span key={`${item.label}-${i}`} className="tabular-nums">
-          <strong className="font-semibold">{item.value}</strong>{' '}
-          <span className="text-muted-foreground">{item.label}</span>
+          <strong className="font-medium">{item.value}</strong>{' '}
+          <span className="text-muted-foreground text-xs">{item.label}</span>
         </span>
       ))}
     </div>

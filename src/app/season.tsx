@@ -61,13 +61,15 @@ export function SeasonPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
-        <h1 className="text-3xl font-bold tracking-tight">Season {seasonNumber}</h1>
+        <h1 className="font-serif text-4xl font-semibold tracking-tight text-balance">
+          Season {seasonNumber}
+        </h1>
         {meta && <p className="text-muted-foreground text-sm">{meta}</p>}
       </div>
 
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-muted-foreground text-left text-xs tracking-wide uppercase">
+          <tr className="text-muted-foreground text-left text-xs">
             <th className="py-2 font-medium">Code</th>
             <th className="py-2 font-medium">Title</th>
             <th className="py-2 font-medium">Aired</th>
