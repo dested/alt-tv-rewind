@@ -3,15 +3,25 @@ import { Link, useParams, useRouteLoaderData } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTRPC } from '~/lib/trpc'
 import { AdminFixEpisode } from '~/components/admin-fix-episode'
+import { Avatar } from '~/components/avatar'
 import { Badge } from '~/components/badge'
 import { MessageBody } from '~/components/message-body'
 import { buildTree, type Node } from '~/lib/thread-tree'
 import { KIND, PREDICTION_OUTCOME, SENTIMENT } from '~/lib/taxonomy'
 import { episodeCode, formatDateTime, formatNumber, plural, relativeToAir } from '~/lib/format'
+import { stripRe } from '~/lib/usenet'
 import type { RootLoaderData } from './routes'
 
 function countDescendants(node: Node): number {
   return node.children.reduce((sum, child) => sum + 1 + countDescendants(child), 0)
+}
+
+// Indent rail for a node's children. Caps visual depth at 4 on ≥sm, 2 below;
+// deeper replies flatten and rely on the "↩ name" link.
+function childRail(depth: number): string {
+  if (depth < 2) return 'ml-[1.125rem] border-l pl-[1.875rem]'
+  if (depth < 4) return 'sm:ml-[1.125rem] sm:border-l sm:pl-[1.875rem]'
+  return ''
 }
 
 function MessageNode({
@@ -35,42 +45,51 @@ function MessageNode({
   const replyCount = countDescendants(node)
 
   return (
-    <article id={`m${m.id}`} className="space-y-1.5 py-3">
-      <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
-        <Link to={`/${showSlug}/people/${m.poster.id}`} className="font-medium hover:underline">
-          {m.poster.displayName}
-        </Link>
-        <span className="text-muted-foreground">{formatDateTime(m.postedAt, m.dateOnly)}</span>
-        {parent && (
-          <a href={`#m${m.parentId}`} className="text-muted-foreground hover:underline">
-            ↳ in reply to {parent.message.poster.displayName}
-          </a>
-        )}
-        {node.children.length > 0 && (
-          <button
-            type="button"
-            onClick={() => toggle(m.id)}
-            className="text-muted-foreground text-xs hover:underline">
-            {isCollapsed ? `show ${replyCount} replies` : `collapse ${replyCount} replies`}
-          </button>
+    <article id={`m${m.id}`} className="grid grid-cols-[2.25rem_1fr] gap-x-3 py-5">
+      <Avatar name={m.poster.displayName} />
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-baseline gap-x-2 text-sm">
+          <Link to={`/${showSlug}/people/${m.poster.id}`} className="font-medium hover:underline">
+            {m.poster.displayName}
+          </Link>
+          <time className="text-muted-foreground text-xs">
+            {formatDateTime(m.postedAt, m.dateOnly)}
+          </time>
+          {parent && (
+            <a href={`#m${m.parentId}`} className="text-muted-foreground text-xs hover:underline">
+              ↩ {parent.message.poster.displayName}
+            </a>
+          )}
+          {node.children.length > 0 && (
+            <button
+              type="button"
+              onClick={() => toggle(m.id)}
+              className="text-muted-foreground hover:text-foreground ml-auto text-xs">
+              {isCollapsed
+                ? `show ${plural(replyCount, 'reply', 'replies')}`
+                : `collapse ${plural(replyCount, 'reply', 'replies')}`}
+            </button>
+          )}
+        </div>
+        <div className="mt-1.5">
+          <MessageBody body={m.body} />
+        </div>
+        {!isCollapsed && node.children.length > 0 && (
+          <div className={childRail(depth)}>
+            {node.children.map((child) => (
+              <MessageNode
+                key={child.message.id}
+                node={child}
+                byId={byId}
+                depth={depth + 1}
+                collapsed={collapsed}
+                toggle={toggle}
+                showSlug={showSlug}
+              />
+            ))}
+          </div>
         )}
       </div>
-      <MessageBody body={m.body} />
-      {!isCollapsed && node.children.length > 0 && (
-        <div className={depth < 6 ? 'ml-3 border-l pl-3 sm:ml-4 sm:pl-4' : undefined}>
-          {node.children.map((child) => (
-            <MessageNode
-              key={child.message.id}
-              node={child}
-              byId={byId}
-              depth={depth + 1}
-              collapsed={collapsed}
-              toggle={toggle}
-              showSlug={showSlug}
-            />
-          ))}
-        </div>
-      )}
     </article>
   )
 }
@@ -143,12 +162,12 @@ export function ThreadPage() {
   const metaSegments: ReactNode[] = []
   if (ep) {
     metaSegments.push(
-      <span className="flex items-center gap-1.5">
-        <Link to={`/${showSlug}/${ep.slug}`} className="hover:underline">
-          {episodeCode(ep.seasonNumber, ep.number)} {ep.title}
-        </Link>
-        <Badge variant="outline">{ep.relation}</Badge>
-      </span>
+      <Link
+        to={`/${showSlug}/${ep.slug}`}
+        className="hover:border-foreground/40 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs">
+        {episodeCode(ep.seasonNumber, ep.number)} {ep.title}
+        <span className="text-muted-foreground">{ep.relation}</span>
+      </Link>
     )
   }
   metaSegments.push(formatDateTime(thread.startedAt, thread.startedDateOnly))
@@ -159,9 +178,11 @@ export function ThreadPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl leading-tight font-bold tracking-tight">{thread.subject}</h1>
-        <div className="text-muted-foreground flex flex-wrap gap-x-2 text-sm">
+      <div className="space-y-3">
+        <h1 className="font-serif text-3xl leading-tight font-semibold tracking-tight text-balance">
+          {stripRe(thread.subject)}
+        </h1>
+        <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           {metaSegments.map((seg, i) => (
             <Fragment key={i}>
               {i > 0 && <span aria-hidden>·</span>}
@@ -170,8 +191,12 @@ export function ThreadPage() {
           ))}
         </div>
         {badges.length > 0 && <div className="flex flex-wrap gap-1.5">{badges}</div>}
-        {thread.predictionClaim && <p className="text-sm italic">{thread.predictionClaim}</p>}
-        {thread.summary && <p className="text-muted-foreground max-w-[60ch]">{thread.summary}</p>}
+        {thread.predictionClaim && (
+          <p className="font-serif text-sm italic">{thread.predictionClaim}</p>
+        )}
+        {thread.summary && (
+          <p className="text-muted-foreground max-w-[68ch] text-sm">{thread.summary}</p>
+        )}
         {session && (
           <AdminFixEpisode
             threadId={threadId}
