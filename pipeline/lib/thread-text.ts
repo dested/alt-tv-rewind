@@ -17,7 +17,13 @@ export type ThreadInput = {
   opener: { messageId: string; text: string; dateOnly: boolean } | null
   // hoursLater is meaningless when either endpoint is dateOnly (~61% of this
   // archive) — consumers switch to daysLater in that case (jev.buildState).
-  replies: Array<{ messageId: string; hoursLater: number; daysLater: number; dateOnly: boolean; text: string }>
+  replies: Array<{
+    messageId: string
+    hoursLater: number
+    daysLater: number
+    dateOnly: boolean
+    text: string
+  }>
   candidateLines: Array<{ label: string; messageId: string; text: string }>
 }
 
@@ -47,7 +53,10 @@ function cleanBody(body: string, limit: number): string {
     if (raw === '-- ') break
     lines.push(raw.replace(/[^\S\n]+/g, ' ').trim())
   }
-  const collapsed = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  const collapsed = lines
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
   return truncate(collapsed, limit)
 }
 
@@ -62,7 +71,10 @@ function insertEarliest(acc: Acc, item: Retained, cap: number): void {
   if (acc.earliest.length > cap) acc.earliest.length = cap
 }
 
-export async function collectThreadInputs(ctx: StageContext, opts: CollectOpts): Promise<Map<string, ThreadInput>> {
+export async function collectThreadInputs(
+  ctx: StageContext,
+  opts: CollectOpts
+): Promise<Map<string, ThreadInput>> {
   const retainLimit = Math.max(opts.openerChars, opts.replyChars)
   const cap = opts.maxReplies + 1
 
@@ -149,15 +161,14 @@ type Line = { messageId: string; text: string }
 export function extractCandidateLines(
   opener: Line | null,
   replies: ReadonlyArray<Line>,
-  max = 12,
+  max = 12
 ): Array<{ label: string; messageId: string; text: string }> {
   const out: Array<{ label: string; messageId: string; text: string }> = []
   const seen = new Set<string>()
   const sources: Line[] = opener ? [opener, ...replies] : [...replies]
 
   for (const src of sources) {
-    for (const segment of src.text.split(/\n+/).flatMap((line) => line.split(/(?<=[.!?])\s+/))) {
-      const line = segment.trim()
+    for (const line of sentences(src.text)) {
       if (!isQuotable(line)) continue
       const key = line.toLowerCase()
       if (seen.has(key)) continue
@@ -169,8 +180,31 @@ export function extractCandidateLines(
   return out
 }
 
+// Usenet bodies are hard-wrapped at ~72 columns, so a physical line is usually
+// a sentence fragment. Unwrap each blank-line-separated paragraph (skipping any
+// that carry quote markers), then split on sentence boundaries.
+function sentences(text: string): string[] {
+  const out: string[] = []
+  for (const para of text.split(/\n[ \t]*\n+/)) {
+    const lines = para
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+    if (lines.length === 0 || lines.some((l) => /^[>|]/.test(l))) continue
+    const flat = lines.join(' ').replace(/\s+/g, ' ')
+    for (const s of flat.split(
+      /(?<=[.!?]["')\]]?)(?<!\b(?:No|Mr|Mrs|Ms|Dr|St|Jr|Sr|vs|etc)\.)\s+/
+    )) {
+      out.push(s.trim())
+    }
+  }
+  return out
+}
+
 function isQuotable(line: string): boolean {
   if (line.length < 25 || line.length > 240) return false
+  // Whole sentences only: opens like one, closes like one.
+  if (!/^["'(A-Z]/.test(line) || !/[.!?]["')\]]?$/.test(line)) return false
   if (line.split(/\s+/).filter(Boolean).length < 5) return false
   if (line.includes('@') || line.includes('http')) return false
   if (line.startsWith('On ') && line.includes(' wrote')) return false
