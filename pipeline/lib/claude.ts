@@ -76,13 +76,21 @@ export function buildEnrichUser(
     sentiment: string
     episode: { key: string; title: string; airDate: string } | null
     hoursAfterAir: number | null
+    // The thread's start (or the episode's air time) had no clock, so timing is
+    // stated in whole days rather than hours.
+    dateOnly: boolean
   },
 ): string {
   const parts: string[] = []
   parts.push(`Subject: ${input.subject}`)
   parts.push(`Kind: ${meta.kind} · Sentiment: ${meta.sentiment}`)
   if (meta.episode) {
-    const timing = meta.hoursAfterAir !== null ? ` (started ${meta.hoursAfterAir}h after it aired)` : ''
+    let timing = ''
+    if (meta.hoursAfterAir !== null) {
+      timing = meta.dateOnly
+        ? ` (posted ${Math.round(meta.hoursAfterAir / 24)} days after the episode aired)`
+        : ` (started ${meta.hoursAfterAir}h after it aired)`
+    }
     parts.push(`Attributed episode: ${meta.episode.key} "${meta.episode.title}", aired ${meta.episode.airDate}${timing}`)
   }
   parts.push(`Replies in thread: ${Math.max(0, input.messageCount - 1)}`)
@@ -91,7 +99,10 @@ export function buildEnrichUser(
   }
   if (input.replies.length > 0) {
     parts.push('', 'Early replies:')
-    for (const r of input.replies) parts.push(`[+${r.hoursLater}h] ${r.text}`)
+    for (const r of input.replies) {
+      const gap = input.opener?.dateOnly || r.dateOnly ? `+${r.daysLater}d` : `+${r.hoursLater}h`
+      parts.push(`[${gap}] ${r.text}`)
+    }
   }
   return parts.join('\n')
 }

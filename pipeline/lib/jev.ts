@@ -66,24 +66,28 @@ export function buildQuestions(episodes: EpisodeRecord[], candidateLines: Thread
   return questions
 }
 
+const DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  timeZone: 'America/New_York',
+})
+const TIME_FMT = new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+  timeZone: 'America/New_York',
+})
+
 // "Thursday, May 16, 1996 11:41 PM ET" — split date and time formatters so the
-// output reads exactly this way rather than Intl's "... at 11:41 PM".
-function formatStarted(iso: string): string {
+// output reads exactly this way rather than Intl's "... at 11:41 PM". When the
+// source header carried no time of day (dateOnly), the clock is dropped so
+// nothing downstream reads a false hour.
+function formatStarted(iso: string, dateOnly: boolean): string {
   const d = new Date(iso)
-  const date = new Intl.DateTimeFormat('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'America/New_York',
-  }).format(d)
-  const time = new Intl.DateTimeFormat('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-    timeZone: 'America/New_York',
-  }).format(d)
-  return `${date} ${time} ET`
+  const date = DATE_FMT.format(d)
+  return dateOnly ? date : `${date} ${TIME_FMT.format(d)} ET`
 }
 
 export function buildState(
@@ -93,13 +97,18 @@ export function buildState(
   const state: Record<string, JsonValue> = {
     newsgroup: ctx.newsgroup,
     show: ctx.showName,
-    thread_started: formatStarted(input.startedAt),
+    thread_started: formatStarted(input.startedAt, input.startedDateOnly),
   }
   if (ctx.hints.length > 0) state.timing_hints = ctx.hints
   state.subject = input.subject
   if (input.opener) state.opening_post = input.opener.text
   if (input.replies.length > 0) {
-    state.replies = input.replies.map((r) => ({ hours_later: r.hoursLater, text: r.text }))
+    // Calendar days when either the opener or the reply lacks a clock, so the
+    // model is never handed a fabricated hour gap.
+    const openerDateOnly = input.opener?.dateOnly ?? false
+    state.replies = input.replies.map((r) =>
+      openerDateOnly || r.dateOnly ? { days_later: r.daysLater, text: r.text } : { hours_later: r.hoursLater, text: r.text },
+    )
   }
   state.total_replies = input.messageCount - 1
   if (input.candidateLines.length > 0) {

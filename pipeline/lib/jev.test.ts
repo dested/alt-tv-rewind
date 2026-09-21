@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test'
 import type { ChoiceResponse, NoulResponse } from '@typesafe-ai/sdk'
-import { toClassification } from './jev'
+import { buildState, toClassification } from './jev'
 import type { ThreadInput } from './thread-text'
 
 function choice(selected: string, probabilities: Record<string, number>): ChoiceResponse {
@@ -27,8 +27,9 @@ const input: ThreadInput = {
   threadKey: 't1',
   subject: 'The Finale',
   startedAt: '1996-05-16T20:00:00.000Z',
+  startedDateOnly: false,
   messageCount: 3,
-  opener: { messageId: '<o>', text: 'opener' },
+  opener: { messageId: '<o>', text: 'opener', dateOnly: false },
   replies: [],
   candidateLines: [{ label: 'L1', messageId: '<o>', text: 'A genuinely quotable line about the finale.' }],
 }

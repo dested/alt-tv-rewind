@@ -56,13 +56,18 @@ function selects(rec: ClassifiedRecord, messageCount: number): boolean {
 function metaFor(input: ThreadInput, rec: ClassifiedRecord, byKey: Map<string, EpisodeRecord>): ReqData['meta'] {
   const c = rec.classification
   const ep = c.episode ? byKey.get(c.episode) : undefined
-  if (!ep) return { kind: c.kind, sentiment: c.sentiment, episode: null, hoursAfterAir: null }
+  if (!ep) {
+    return { kind: c.kind, sentiment: c.sentiment, episode: null, hoursAfterAir: null, dateOnly: input.startedDateOnly }
+  }
   const airMs = ep.airStamp ? Date.parse(ep.airStamp) : Date.parse(ep.airDate + 'T00:00:00Z')
   return {
     kind: c.kind,
     sentiment: c.sentiment,
     episode: { key: ep.key, title: ep.title, airDate: ep.airDate },
     hoursAfterAir: Math.round(((Date.parse(input.startedAt) - airMs) / 3.6e6) * 10) / 10,
+    // No usable hour when the thread start lacked a clock or the episode has no
+    // zoned airstamp.
+    dateOnly: input.startedDateOnly || ep.airStamp === null,
   }
 }
 

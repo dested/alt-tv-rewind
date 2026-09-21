@@ -12,9 +12,12 @@ export type ThreadInput = {
   threadKey: string
   subject: string
   startedAt: string
+  startedDateOnly: boolean // the thread's start timestamp had no time of day
   messageCount: number
-  opener: { messageId: string; text: string } | null
-  replies: Array<{ messageId: string; hoursLater: number; text: string }>
+  opener: { messageId: string; text: string; dateOnly: boolean } | null
+  // hoursLater is meaningless when either endpoint is dateOnly (~61% of this
+  // archive) — consumers switch to daysLater in that case (jev.buildState).
+  replies: Array<{ messageId: string; hoursLater: number; daysLater: number; dateOnly: boolean; text: string }>
   candidateLines: Array<{ label: string; messageId: string; text: string }>
 }
 
@@ -28,7 +31,7 @@ type CollectOpts = {
 // A message retained during the streaming pass: text is already quote-stripped,
 // signature-cut, whitespace-collapsed and truncated to the larger of the two
 // display limits, so re-truncating per role at the end is a cheap slice.
-type Retained = { messageId: string; postedAt: string; text: string }
+type Retained = { messageId: string; postedAt: string; dateOnly: boolean; text: string }
 
 type Acc = {
   rootMessageId: string | null
@@ -81,7 +84,12 @@ export async function collectThreadInputs(ctx: StageContext, opts: CollectOpts):
       acc = { rootMessageId: t.rootMessageId, earliest: [], root: null }
       accs.set(m.threadKey, acc)
     }
-    const retained: Retained = { messageId: m.messageId, postedAt: m.postedAt, text: cleanBody(m.body, retainLimit) }
+    const retained: Retained = {
+      messageId: m.messageId,
+      postedAt: m.postedAt,
+      dateOnly: m.dateOnly,
+      text: cleanBody(m.body, retainLimit),
+    }
     insertEarliest(acc, retained, cap)
     if (acc.rootMessageId !== null && m.messageId === acc.rootMessageId) acc.root = retained
   }
@@ -91,7 +99,11 @@ export async function collectThreadInputs(ctx: StageContext, opts: CollectOpts):
     const acc = accs.get(threadKey)
     const openerRetained = pickOpener(acc)
     const opener = openerRetained
-      ? { messageId: openerRetained.messageId, text: truncate(openerRetained.text, opts.openerChars) }
+      ? {
+          messageId: openerRetained.messageId,
+          text: truncate(openerRetained.text, opts.openerChars),
+          dateOnly: openerRetained.dateOnly,
+        }
       : null
 
     const replies: ThreadInput['replies'] = []
@@ -99,9 +111,12 @@ export async function collectThreadInputs(ctx: StageContext, opts: CollectOpts):
       const openerMs = Date.parse(openerRetained.postedAt)
       for (const r of acc.earliest) {
         if (r.messageId === openerRetained.messageId) continue
+        const hoursLater = Math.round(((Date.parse(r.postedAt) - openerMs) / 3.6e6) * 10) / 10
         replies.push({
           messageId: r.messageId,
-          hoursLater: Math.round(((Date.parse(r.postedAt) - openerMs) / 3.6e6) * 10) / 10,
+          hoursLater,
+          daysLater: Math.round(hoursLater / 24),
+          dateOnly: r.dateOnly,
           text: truncate(r.text, opts.replyChars),
         })
         if (replies.length >= opts.maxReplies) break
@@ -112,6 +127,7 @@ export async function collectThreadInputs(ctx: StageContext, opts: CollectOpts):
       threadKey,
       subject: t.subject,
       startedAt: t.startedAt,
+      startedDateOnly: t.startedDateOnly,
       messageCount: t.messageCount,
       opener,
       replies,
