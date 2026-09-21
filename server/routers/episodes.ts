@@ -2,7 +2,14 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { router, publicProcedure } from '../trpc'
 import { prisma } from '../prisma'
-import { episodeCardSelect, toEpisodeCard, iso, isoOrNull, type EpisodeCard } from './shared'
+import {
+  episodeCardSelect,
+  toEpisodeCard,
+  iso,
+  isoOrNull,
+  daysBetweenAirAndPost,
+  type EpisodeCard,
+} from './shared'
 
 // Day resolution, not hours: most 1995–2000 posts carry no time of day.
 const REACTION_DAY_FROM = -1
@@ -126,7 +133,12 @@ export const episodesRouter = router({
         WHERE NOT m.is_spam
         GROUP BY day
       `
-      const byDay = new Map(z.array(reactionRowSchema).parse(rawByDay).map((r) => [r.day, r.messages]))
+      const byDay = new Map(
+        z
+          .array(reactionRowSchema)
+          .parse(rawByDay)
+          .map((r) => [r.day, r.messages])
+      )
       const reactionByDay: Array<{ day: number; messages: number }> = []
       for (let day = REACTION_DAY_FROM; day <= REACTION_DAY_TO; day++) {
         reactionByDay.push({ day, messages: byDay.get(day) ?? 0 })
@@ -155,14 +167,23 @@ export const episodesRouter = router({
         if (t.pullQuote === null) return []
         const targetId = t.pullQuoteMessageId ?? t.rootMessageId
         const msg = targetId === null ? undefined : messageById.get(targetId)
+        const postedAt = msg ? msg.postedAt : t.startedAt
+        const postedDateOnly = msg ? msg.dateOnly : t.startedDateOnly
+        // Same timing contract as ThreadCard: hours only when the clock is real.
+        const hoursAfterAir =
+          ep.airStamp === null || postedDateOnly
+            ? null
+            : Math.round(((postedAt.getTime() - ep.airStamp.getTime()) / 3_600_000) * 10) / 10
         return [
           {
             threadId: t.id,
             subject: t.subject,
             pullQuote: t.pullQuote,
             posterName: msg?.poster.displayName ?? null,
-            postedAt: msg ? iso(msg.postedAt) : iso(t.startedAt),
-            postedDateOnly: msg ? msg.dateOnly : t.startedDateOnly,
+            postedAt: iso(postedAt),
+            postedDateOnly,
+            hoursAfterAir,
+            daysAfterAir: daysBetweenAirAndPost(ep.airDate, postedAt),
           },
         ]
       })

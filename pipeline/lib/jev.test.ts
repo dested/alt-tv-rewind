@@ -98,3 +98,34 @@ describe('toClassification', () => {
     expect(c.predictionOutcome).toBeNull()
   })
 })
+
+describe('buildState', () => {
+  const stateCtx = { showName: 'Seinfeld', newsgroup: 'alt.tv.seinfeld', hints: [] as string[] }
+
+  test('a timed opener gets a clock and hours_later replies', () => {
+    const timed: ThreadInput = {
+      ...input,
+      startedDateOnly: false,
+      opener: { messageId: '<o>', text: 'opener', dateOnly: false },
+      replies: [{ messageId: '<r>', hoursLater: 3.5, daysLater: 0, dateOnly: false, text: 'reply' }],
+    }
+    const state = buildState(timed, stateCtx)
+    expect(String(state.thread_started)).toMatch(/ ET$/)
+    expect(state.replies).toEqual([{ hours_later: 3.5, text: 'reply' }])
+    // omitted fields are absent, not null
+    expect('timing_hints' in state).toBe(false)
+  })
+
+  test('a date-only opener drops the clock and reports replies in days', () => {
+    const dateOnly: ThreadInput = {
+      ...input,
+      startedAt: '1996-05-17T12:00:00.000Z',
+      startedDateOnly: true,
+      opener: { messageId: '<o>', text: 'opener', dateOnly: true },
+      replies: [{ messageId: '<r>', hoursLater: 48, daysLater: 2, dateOnly: true, text: 'reply' }],
+    }
+    const state = buildState(dateOnly, stateCtx)
+    expect(state.thread_started).toBe('Friday, May 17, 1996')
+    expect(state.replies).toEqual([{ days_later: 2, text: 'reply' }])
+  })
+})

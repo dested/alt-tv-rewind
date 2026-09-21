@@ -9,7 +9,13 @@ import { StatLine } from '~/components/stat-line'
 import { ThreadCard } from '~/components/thread-card'
 import { Button } from '~/components/ui/button'
 import { isEpisodeFilter, type EpisodeFilter } from '~/lib/taxonomy'
-import { episodeCode, formatAirDate, formatDate, formatNumber, relativeToAir } from '~/lib/format'
+import {
+  episodeCode,
+  formatAirDate,
+  formatDateTime,
+  formatNumber,
+  relativeToAir,
+} from '~/lib/format'
 
 type ByEpisode = RouterOutputs['threads']['byEpisode']
 
@@ -170,7 +176,7 @@ export function EpisodePage() {
       {data.reactionByDay.some((p) => p.messages > 0) && (
         <div className="space-y-1">
           <ReactionCurve points={data.reactionByDay} airDate={ep.airDate} />
-          <p className="text-muted-foreground text-sm">Posts per day after the first airing (ET)</p>
+          <p className="text-muted-foreground text-sm">Posts per day after the first airing</p>
         </div>
       )}
 
@@ -203,7 +209,7 @@ export function EpisodePage() {
           <div className="grid gap-4 md:grid-cols-2">
             {data.quotes.map((q) => {
               const when =
-                relativeToAir(null, daysBetween(q.postedAt, ep.airDate), q.postedAt) ??
+                relativeToAir(q.hoursAfterAir, q.daysAfterAir, q.postedAt) ??
                 formatDateTime(q.postedAt, q.postedDateOnly)
               return (
                 <blockquote key={q.threadId} className="usenet bg-card rounded-lg border p-4">

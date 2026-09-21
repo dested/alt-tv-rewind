@@ -6,5 +6,29 @@
     "tvmazeQuery": "seinfeld",
     "tvmazeId": 530,
     "liveWindowDays": 10
+  },
+  {
+    "slug": "simpsons",
+    "name": "The Simpsons",
+    "newsgroup": "alt.tv.simpsons",
+    "tvmazeQuery": "The Simpsons",
+    "tvmazeId": 83,
+    "liveWindowDays": 10
+  },
+  {
+    "slug": "king-of-the-hill",
+    "name": "King of the Hill",
+    "newsgroup": "alt.tv.king-of-hill",
+    "tvmazeQuery": "King of the Hill",
+    "tvmazeId": 115,
+    "liveWindowDays": 10
+  },
+  {
+    "slug": "friends",
+    "name": "Friends",
+    "newsgroup": "alt.tv.friends",
+    "tvmazeQuery": "Friends",
+    "liveWindowDays": 10,
+    "tvmazeId": 431
   }
 ]
