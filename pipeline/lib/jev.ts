@@ -3,7 +3,13 @@
 // into a Classification. Jev cannot generate text and reads its instructions
 // literally, so every criterion is a plain declarative description.
 import { choice, noul, TypeSafeClient } from '@typesafe-ai/sdk'
-import type { ChoiceResponse, JsonValue, NoulResponse, Questions, ScoreResponse } from '@typesafe-ai/sdk'
+import type {
+  ChoiceResponse,
+  JsonValue,
+  NoulResponse,
+  Questions,
+  ScoreResponse,
+} from '@typesafe-ai/sdk'
 import { Classification } from './types'
 import type { EpisodeRecord } from './types'
 import type { ThreadInput } from './thread-text'
@@ -15,8 +21,13 @@ export function createJevClient(): TypeSafeClient {
   return new TypeSafeClient({ timeout: 30_000 })
 }
 
-export function buildQuestions(episodes: EpisodeRecord[], candidateLines: ThreadInput['candidateLines']): Questions {
-  const episodeCriteria: Record<string, string> = { none: 'Not primarily about one specific episode' }
+export function buildQuestions(
+  episodes: EpisodeRecord[],
+  candidateLines: ThreadInput['candidateLines']
+): Questions {
+  const episodeCriteria: Record<string, string> = {
+    none: 'Not primarily about one specific episode',
+  }
   for (const ep of episodes) {
     const summary = ep.summary ? ' — ' + ep.summary.slice(0, 90) : ''
     episodeCriteria[ep.key] = `${ep.title} — first aired ${ep.airDate}${summary}`
@@ -25,7 +36,7 @@ export function buildQuestions(episodes: EpisodeRecord[], candidateLines: Thread
   const questions: Questions = {
     episode: choice(
       'Which episode is this thread primarily about? Pick none when the thread is about the show in general, about several episodes, or about something else. A thread started within a few days after an air date that reacts to last night’s episode without naming it is about that episode.',
-      episodeCriteria,
+      episodeCriteria
     ),
     kind: choice('What kind of thread is this, judging by the opening post?', {
       reaction: 'Opinions about an episode or the show — what worked, what did not',
@@ -39,28 +50,40 @@ export function buildQuestions(episodes: EpisodeRecord[], candidateLines: Thread
       offtopic: 'Not about the show',
       spam: 'Advertising, adult content, scams, or chain letters',
     }),
-    sentiment: choice('How does the opening poster feel about the episode or show being discussed?', {
-      loved: 'Enthusiastic praise',
-      liked: 'Positive overall',
-      mixed: 'Both praise and complaints',
-      disliked: 'Negative overall',
-      hated: 'Strong dislike or anger',
-      neutral: 'No opinion expressed — a question, fact, or announcement',
-    }),
-    hot_take: noul('The opening post takes a strong, provocative stance that other fans are likely to argue with', {
-      true: 'A bold or contrarian opinion stated forcefully',
-      false: 'Mild, balanced, factual, or a question',
-    }),
-    spam: noul('The opening post is unsolicited junk rather than a genuine post to this newsgroup', {
-      true: 'Advertising, adult content, get-rich schemes, chain letters, or unrelated mass posting',
-      false: 'A real message from a participant, even if off topic',
-    }),
+    sentiment: choice(
+      'How does the opening poster feel about the episode or show being discussed?',
+      {
+        loved: 'Enthusiastic praise',
+        liked: 'Positive overall',
+        mixed: 'Both praise and complaints',
+        disliked: 'Negative overall',
+        hated: 'Strong dislike or anger',
+        neutral: 'No opinion expressed — a question, fact, or announcement',
+      }
+    ),
+    hot_take: noul(
+      'The opening post takes a strong, provocative stance that other fans are likely to argue with',
+      {
+        true: 'A bold or contrarian opinion stated forcefully',
+        false: 'Mild, balanced, factual, or a question',
+      }
+    ),
+    spam: noul(
+      'The opening post is unsolicited junk rather than a genuine post to this newsgroup',
+      {
+        true: 'Advertising, adult content, get-rich schemes, chain letters, or unrelated mass posting',
+        false: 'A real message from a participant, even if off topic',
+      }
+    ),
   }
 
   if (candidateLines.length > 0) {
     const pullCriteria: Record<string, string> = { none: 'Nothing here stands out' }
     for (const c of candidateLines) pullCriteria[c.label] = c.text
-    questions.pull_quote = choice('Which line is the most striking, funny, or quotable, read on its own?', pullCriteria)
+    questions.pull_quote = choice(
+      'Which line is the most striking, funny, or quotable, read on its own?',
+      pullCriteria
+    )
   }
 
   return questions
@@ -92,7 +115,7 @@ function formatStarted(iso: string, dateOnly: boolean): string {
 
 export function buildState(
   input: ThreadInput,
-  ctx: { showName: string; newsgroup: string; hints: string[] },
+  ctx: { showName: string; newsgroup: string; hints: string[] }
 ): Record<string, JsonValue> {
   const state: Record<string, JsonValue> = {
     newsgroup: ctx.newsgroup,
@@ -106,8 +129,11 @@ export function buildState(
     // Calendar days when either the opener or the reply lacks a clock, so the
     // model is never handed a fabricated hour gap.
     const openerDateOnly = input.opener?.dateOnly ?? false
-    state.replies = input.replies.map((r) =>
-      openerDateOnly || r.dateOnly ? { days_later: r.daysLater, text: r.text } : { hours_later: r.hoursLater, text: r.text },
+    state.replies = input.replies.map(
+      (r): Record<string, JsonValue> =>
+        openerDateOnly || r.dateOnly
+          ? { days_later: r.daysLater, text: r.text }
+          : { hours_later: r.hoursLater, text: r.text }
     )
   }
   state.total_replies = input.messageCount - 1

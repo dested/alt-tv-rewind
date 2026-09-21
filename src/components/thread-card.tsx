@@ -19,7 +19,9 @@ function MetaLine({ segments }: { segments: ReactNode[] }) {
 }
 
 export function ThreadCard({ thread, showSlug }: { thread: ThreadCardData; showSlug: string }) {
-  const when = relativeToAir(thread.hoursAfterAir, thread.startedAt) ?? formatDate(thread.startedAt)
+  const when =
+    relativeToAir(thread.hoursAfterAir, thread.daysAfterAir, thread.startedAt) ??
+    formatDate(thread.startedAt)
 
   const segments: ReactNode[] = [
     thread.starter ? (
@@ -71,7 +73,7 @@ export function ThreadCard({ thread, showSlug }: { thread: ThreadCardData; showS
       <div>
         <Link
           to={`/${showSlug}/thread/${thread.id}`}
-          className="font-medium leading-snug hover:underline">
+          className="leading-snug font-medium hover:underline">
           {thread.subject}
         </Link>
       </div>

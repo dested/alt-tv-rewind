@@ -32,13 +32,27 @@ export function EpisodePage() {
 
   const liveQuery = useQuery(
     trpc.threads.byEpisode.queryOptions(
-      { episodeId: episodeId ?? 0, relation: 'live', filter: tab, sort: 'size', cursor: 0, limit: 20 },
+      {
+        episodeId: episodeId ?? 0,
+        relation: 'live',
+        filter: tab,
+        sort: 'size',
+        cursor: 0,
+        limit: 20,
+      },
       { enabled: episodeId !== undefined }
     )
   )
   const retroQuery = useQuery(
     trpc.threads.byEpisode.queryOptions(
-      { episodeId: episodeId ?? 0, relation: 'retro', filter: 'all', sort: 'size', cursor: 0, limit: 20 },
+      {
+        episodeId: episodeId ?? 0,
+        relation: 'retro',
+        filter: 'all',
+        sort: 'size',
+        cursor: 0,
+        limit: 20,
+      },
       { enabled: episodeId !== undefined }
     )
   )
@@ -131,11 +145,7 @@ export function EpisodePage() {
   return (
     <div className="space-y-10">
       {ep.imageUrl && (
-        <img
-          src={ep.imageUrl}
-          alt=""
-          className="aspect-video w-full rounded-lg object-cover"
-        />
+        <img src={ep.imageUrl} alt="" className="aspect-video w-full rounded-lg object-cover" />
       )}
 
       <div className="space-y-3">
@@ -157,12 +167,10 @@ export function EpisodePage() {
         <StatLine items={stats} />
       </div>
 
-      {ep.airStamp && data.reactionCurve.length > 0 && (
+      {data.reactionByDay.some((p) => p.messages > 0) && (
         <div className="space-y-1">
-          <ReactionCurve points={data.reactionCurve} airStamp={ep.airStamp} />
-          <p className="text-muted-foreground text-sm">
-            Posts per hour after the first airing (ET)
-          </p>
+          <ReactionCurve points={data.reactionByDay} airDate={ep.airDate} />
+          <p className="text-muted-foreground text-sm">Posts per day after the first airing (ET)</p>
         </div>
       )}
 
@@ -194,15 +202,13 @@ export function EpisodePage() {
           <h2 className="text-xl font-semibold tracking-tight">Best of the morning after</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {data.quotes.map((q) => {
-              const hours =
-                ep.airStamp === null
-                  ? null
-                  : (new Date(q.postedAt).getTime() - new Date(ep.airStamp).getTime()) / 3_600_000
-              const when = relativeToAir(hours, q.postedAt) ?? formatDate(q.postedAt)
+              const when =
+                relativeToAir(null, daysBetween(q.postedAt, ep.airDate), q.postedAt) ??
+                formatDateTime(q.postedAt, q.postedDateOnly)
               return (
                 <blockquote key={q.threadId} className="usenet bg-card rounded-lg border p-4">
                   {q.pullQuote}
-                  <footer className="text-muted-foreground mt-2 text-xs font-sans">
+                  <footer className="text-muted-foreground mt-2 font-sans text-xs">
                     — {q.posterName ?? 'unknown'}, {when} ·{' '}
                     <Link to={`/${showSlug}/thread/${q.threadId}`} className="hover:underline">
                       {q.subject}

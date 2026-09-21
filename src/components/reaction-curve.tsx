@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { formatDateTime, plural } from '~/lib/format'
+import { formatAirDate, plural } from '~/lib/format'
 
-// Hourly reaction bars over the live window (−6h…96h), brand fill. Deterministic
+// Reaction bars per calendar day after the air date (−1d…+14d), brand fill —
+// day resolution because most 1990s posts carried no time of day. Deterministic
 // SVG so SSR and client markup match; the hover tooltip only appears after a
 // pointer event (initial state null → identical first render on both sides).
 
@@ -11,36 +12,41 @@ const PLOT_LEFT = 10
 const PLOT_RIGHT = 990
 const PLOT_TOP = 8
 const BASELINE = 96
+const DAY_MS = 86_400_000
 
 export function ReactionCurve({
   points,
-  airStamp,
+  airDate,
 }: {
-  points: Array<{ hour: number; messages: number }>
-  airStamp: string
+  points: Array<{ day: number; messages: number }>
+  airDate: string
 }) {
   const [hovered, setHovered] = useState<number | null>(null)
 
-  if (points.length === 0 || points.every((p) => p.messages === 0)) return null
-
   const first = points[0]
-  if (!first) return null
-  const minHour = first.hour
+  if (!first || points.every((p) => p.messages === 0)) return null
+
+  const minDay = first.day
+  const lastDay = points[points.length - 1]?.day ?? minDay
   const max = Math.max(...points.map((p) => p.messages), 1)
   const slot = (PLOT_RIGHT - PLOT_LEFT) / points.length
   const barW = Math.max(slot - 1, 0.5)
-  const xForHour = (h: number): number => PLOT_LEFT + (h - minHour) * slot
+  const centerForDay = (d: number): number => PLOT_LEFT + (d - minDay) * slot + barW / 2
 
-  const airInstant = new Date(airStamp).getTime()
-  const dividers = [24, 48, 72].filter((h) => h <= (points[points.length - 1]?.hour ?? 0))
+  const airMs = new Date(`${airDate.slice(0, 10)}T12:00:00Z`).getTime()
+  const dayMarks = [1, 7, 14].filter((d) => d <= lastDay)
 
   return (
-    <svg viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} className="h-auto w-full" role="img" aria-label="Reaction curve">
-      {dividers.map((h) => (
+    <svg
+      viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
+      className="h-auto w-full"
+      role="img"
+      aria-label="Reaction curve">
+      {dayMarks.map((d) => (
         <line
-          key={`d${h}`}
-          x1={xForHour(h)}
-          x2={xForHour(h)}
+          key={`d${d}`}
+          x1={centerForDay(d)}
+          x2={centerForDay(d)}
           y1={PLOT_TOP}
           y2={100}
           className="stroke-border"
@@ -52,7 +58,7 @@ export function ReactionCurve({
         const height = (p.messages / max) * (BASELINE - PLOT_TOP)
         const x = PLOT_LEFT + i * slot
         return (
-          <g key={p.hour}>
+          <g key={p.day}>
             <rect x={x} y={BASELINE - height} width={barW} height={height} className="fill-brand" />
             <rect
               x={x}
@@ -67,31 +73,31 @@ export function ReactionCurve({
         )
       })}
 
-      {/* Air-time marker */}
+      {/* Air-day marker */}
       <line
-        x1={xForHour(0)}
-        x2={xForHour(0)}
+        x1={centerForDay(0)}
+        x2={centerForDay(0)}
         y1={4}
         y2={100}
         className="stroke-foreground/50"
         strokeWidth={1}
       />
-      <text x={xForHour(0) + 3} y={14} className="fill-muted-foreground text-[11px]">
+      <text x={centerForDay(0) + 3} y={14} className="fill-muted-foreground text-[11px]">
         aired
       </text>
 
       {/* Axis labels */}
       <text x={PLOT_LEFT} y={114} className="fill-muted-foreground text-[11px]">
-        −6h
+        {`${minDay}d`}
       </text>
-      {dividers.map((h, i) => (
+      {dayMarks.map((d) => (
         <text
-          key={`l${h}`}
-          x={xForHour(h)}
+          key={`l${d}`}
+          x={centerForDay(d)}
           y={114}
           textAnchor="middle"
           className="fill-muted-foreground text-[11px]">
-          {`+${i + 1}d`}
+          {`+${d}d`}
         </text>
       ))}
 
@@ -99,12 +105,15 @@ export function ReactionCurve({
         (() => {
           const p = points[hovered]
           if (!p) return null
-          const startIso = new Date(airInstant + p.hour * 3_600_000).toISOString()
-          const label = `${formatDateTime(startIso)} · ${plural(p.messages, 'post')}`
+          const iso = new Date(airMs + p.day * DAY_MS).toISOString()
+          const label = `${formatAirDate(iso, 'short')} · ${plural(p.messages, 'post')}`
           const barX = PLOT_LEFT + hovered * slot
           const anchorEnd = barX > (PLOT_LEFT + PLOT_RIGHT) / 2
           const width = Math.min(label.length * 5.6 + 10, 520)
-          const boxX = Math.max(2, Math.min(anchorEnd ? barX + barW - width : barX, VIEW_W - width - 2))
+          const boxX = Math.max(
+            2,
+            Math.min(anchorEnd ? barX + barW - width : barX, VIEW_W - width - 2)
+          )
           return (
             <g>
               <rect
