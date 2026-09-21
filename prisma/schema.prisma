@@ -302,11 +302,12 @@ model Message {
   lineCount Int      @default(0) @map("line_count")
   isSpam    Boolean  @default(false) @map("is_spam")
 
-  // GENERATED ALWAYS AS to_tsvector('english', subject || ' ' || body) STORED
-  // + GIN index — both hand-written in the init migration (Prisma can't express them).
+  // Maintained by the `message_search_trg` trigger (hand-written in the init
+  // migration): to_tsvector('english', subject || ' ' || body).
   search Unsupported("tsvector")?
 
   @@unique([archiveId, messageId])
+  @@index([search], type: Gin)
   @@index([threadId, postedAt])
   @@index([posterId, postedAt])
   @@index([archiveId, postedAt])

@@ -212,13 +212,25 @@ CREATE TABLE "message" (
     "body" TEXT NOT NULL,
     "line_count" INTEGER NOT NULL DEFAULT 0,
     "is_spam" BOOLEAN NOT NULL DEFAULT false,
-    -- hand-written: full-text index over subject + body (Prisma cannot express generated columns)
-    "search" tsvector GENERATED ALWAYS AS (to_tsvector('english', coalesce("subject", '') || ' ' || coalesce("body", ''))) STORED,
+    "search" tsvector,
 
     CONSTRAINT "message_pkey" PRIMARY KEY ("id")
 );
 
--- hand-written: GIN index for the generated tsvector
+-- hand-written: keep message.search in sync via trigger. A GENERATED column
+-- would be cleaner, but Prisma migrate can't represent one and tries to drop
+-- it on every subsequent diff; triggers are invisible to it.
+CREATE FUNCTION message_search_update() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.search := to_tsvector('english', coalesce(NEW.subject, '') || ' ' || coalesce(NEW.body, ''));
+  RETURN NEW;
+END $$;
+
+CREATE TRIGGER message_search_trg
+  BEFORE INSERT OR UPDATE OF subject, body ON "message"
+  FOR EACH ROW EXECUTE FUNCTION message_search_update();
+
+-- CreateIndex (GIN, declared in schema.prisma as @@index([search], type: Gin))
 CREATE INDEX "message_search_idx" ON "message" USING GIN ("search");
 
 -- CreateTable
