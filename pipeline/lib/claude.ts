@@ -17,9 +17,11 @@ export function createClaudeClient(): Anthropic {
   return new Anthropic()
 }
 
+// The prompt asks for ≤200 chars; the parser accepts up to 600 because Haiku
+// overshoots ~25% of the time and a 230-char sentence is still a good summary.
 export const EnrichOutput = z.object({
-  summary: z.string().max(200),
-  predictionClaim: z.string().max(200).nullable(),
+  summary: z.string().min(1).max(600),
+  predictionClaim: z.string().max(600).nullable(),
   predictionOutcome: z.enum(['came_true', 'did_not', 'unknown']).nullable(),
 })
 export type EnrichOutputData = z.infer<typeof EnrichOutput>
@@ -35,8 +37,8 @@ export const ENRICH_TOOL: Anthropic.Tool = {
   input_schema: {
     type: 'object',
     properties: {
-      summary: { type: 'string', maxLength: 200 },
-      predictionClaim: { anyOf: [{ type: 'string', maxLength: 200 }, { type: 'null' }] },
+      summary: { type: 'string', maxLength: 600 },
+      predictionClaim: { anyOf: [{ type: 'string', maxLength: 600 }, { type: 'null' }] },
       predictionOutcome: {
         anyOf: [{ type: 'string', enum: ['came_true', 'did_not', 'unknown'] }, { type: 'null' }],
       },
@@ -52,7 +54,10 @@ const ENRICH_RULES = [
   'If the thread is a prediction: predictionClaim states the prediction in ≤ 200 chars as a claim about the show; predictionOutcome judges it from your knowledge of what actually happened on the show — came_true, did_not, or unknown when it cannot be judged or is too vague. Otherwise both are null.',
 ].join('\n')
 
-export function buildEnrichSystem(show: ShowMeta & { newsgroup: string }, episodes: EpisodeRecord[]): string {
+export function buildEnrichSystem(
+  show: ShowMeta & { newsgroup: string },
+  episodes: EpisodeRecord[]
+): string {
   const list = episodes
     .map((ep) => {
       const summary = ep.summary ? ' · ' + ep.summary.slice(0, 120) : ''
@@ -79,7 +84,7 @@ export function buildEnrichUser(
     // The thread's start (or the episode's air time) had no clock, so timing is
     // stated in whole days rather than hours.
     dateOnly: boolean
-  },
+  }
 ): string {
   const parts: string[] = []
   parts.push(`Subject: ${input.subject}`)
@@ -91,7 +96,9 @@ export function buildEnrichUser(
         ? ` (posted ${Math.round(meta.hoursAfterAir / 24)} days after the episode aired)`
         : ` (started ${meta.hoursAfterAir}h after it aired)`
     }
-    parts.push(`Attributed episode: ${meta.episode.key} "${meta.episode.title}", aired ${meta.episode.airDate}${timing}`)
+    parts.push(
+      `Attributed episode: ${meta.episode.key} "${meta.episode.title}", aired ${meta.episode.airDate}${timing}`
+    )
   }
   parts.push(`Replies in thread: ${Math.max(0, input.messageCount - 1)}`)
   if (input.opener) {
@@ -110,7 +117,9 @@ export function buildEnrichUser(
 // One tiny live call to see whether this account/model accepts output_config
 // structured outputs; a 400 that names output_config/format means fall back to
 // a strict tool. Any other failure is a real error and rethrown.
-export async function probeStructuredOutputs(client: Anthropic): Promise<'output_config' | 'strict_tool'> {
+export async function probeStructuredOutputs(
+  client: Anthropic
+): Promise<'output_config' | 'strict_tool'> {
   try {
     await client.messages.parse({
       model: 'claude-haiku-4-5',
@@ -118,7 +127,8 @@ export async function probeStructuredOutputs(client: Anthropic): Promise<'output
       messages: [
         {
           role: 'user',
-          content: 'Reply with summary set to "probe", predictionClaim null, and predictionOutcome null.',
+          content:
+            'Reply with summary set to "probe", predictionClaim null, and predictionOutcome null.',
         },
       ],
       output_config: { format: zodOutputFormat(EnrichOutput) },
