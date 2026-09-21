@@ -10,8 +10,9 @@ const schema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((v) => v === 'true'),
-  // Used by the ingest pipeline's classify/recap stages only; the web server
-  // never calls the model.
+  // Used by the ingest pipeline only (classify → Jev, enrich/recap → Claude);
+  // the web server never calls a model.
+  TYPESAFE_API_KEY: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
 })
 

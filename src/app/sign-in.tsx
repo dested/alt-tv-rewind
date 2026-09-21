@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, useRevalidator } from 'react-router-dom'
+import { useNavigate, useRevalidator } from 'react-router-dom'
 import { authClient } from '~/lib/auth-client'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
@@ -25,7 +25,7 @@ export function SignInPage() {
       return
     }
     revalidator.revalidate()
-    navigate('/dashboard')
+    navigate('/')
   }
 
   return (
@@ -33,7 +33,7 @@ export function SignInPage() {
       <Card>
         <CardHeader>
           <CardTitle>Sign in</CardTitle>
-          <CardDescription>Enter your email and password to continue.</CardDescription>
+          <CardDescription>Admin access for fixing episode attributions</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
@@ -63,12 +63,6 @@ export function SignInPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Signing in…' : 'Sign in'}
             </Button>
-            <p className="text-muted-foreground text-center text-sm">
-              No account?{' '}
-              <Link to="/sign-up" className="underline">
-                Sign up
-              </Link>
-            </p>
           </form>
         </CardContent>
       </Card>

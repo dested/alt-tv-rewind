@@ -127,7 +127,7 @@ export const CandidateRecord = z.object({
 })
 export type CandidateRecord = z.infer<typeof CandidateRecord>
 
-// stage classify → classified.jsonl (one per LLM-classified thread)
+// stage classify → classified.jsonl (one per thread; Jev "System One" decisions)
 export const ThreadKind = z.enum([
   'reaction',
   'prediction',
@@ -143,29 +143,52 @@ export const ThreadKind = z.enum([
 export const Sentiment = z.enum(['loved', 'liked', 'mixed', 'disliked', 'hated', 'neutral'])
 export const PredictionOutcome = z.enum(['came_true', 'did_not', 'unknown'])
 
+const pct = z.number().int().min(0).max(100)
+
+// Decisions come from Jev (typed choice/noul questions, calibrated
+// probabilities, no text generation). Prose fields (summary, prediction claim
+// + grading) come from the separate `enrich` stage and are null here.
 export const Classification = z.object({
   episode: z.string().nullable(), // "S07E24" — the episode this thread is primarily about
-  episodeConfidence: z.number().int().min(0).max(100),
-  secondaryEpisodes: z.array(z.string()).max(3),
+  episodeConfidence: pct, // probability of the chosen option × 100
+  secondaryEpisodes: z.array(z.string()).max(3), // other options with probability ≥ 0.15
   kind: ThreadKind,
+  kindConfidence: pct,
   sentiment: Sentiment,
-  hotTake: z.boolean(), // opener is a strong opinion likely to provoke disagreement
-  summary: z.string().max(200), // one line, present tense, no poster names
-  pullQuote: z.string().max(240).nullable(), // verbatim line from a provided message
+  sentimentConfidence: pct,
+  hotTake: z.boolean(), // hotTakeProbability ≥ 60
+  hotTakeProbability: pct, // opener takes a strong stance likely to provoke disagreement
+  spamProbability: pct, // load marks the thread spam at ≥ 90
+  summary: z.string().max(200).nullable(), // filled by enrich
+  pullQuote: z.string().max(240).nullable(), // verbatim line chosen among candidates
   pullQuoteMessageId: z.string().nullable(), // Message-ID the quote came from
-  predictionClaim: z.string().max(200).nullable(), // only when kind = prediction
-  predictionOutcome: PredictionOutcome.nullable(), // only when kind = prediction
+  predictionClaim: z.string().max(200).nullable(), // filled by enrich
+  predictionOutcome: PredictionOutcome.nullable(), // filled by enrich
 })
 export type Classification = z.infer<typeof Classification>
 
 export const ClassifiedRecord = z.object({
   threadKey: z.string(),
-  model: z.string(),
+  model: z.string(), // e.g. "jev-1.13.0"
   classification: Classification,
+  inputTokens: z.number().int(),
+  outputTokens: z.number().int(), // always 0 for Jev; kept for symmetry
+})
+export type ClassifiedRecord = z.infer<typeof ClassifiedRecord>
+
+// stage enrich → enriched.jsonl (Haiku, Message Batches). Only threads that
+// surface in the UI or are predictions get one. `load` merges these over the
+// null prose fields of the ClassifiedRecord.
+export const EnrichedRecord = z.object({
+  threadKey: z.string(),
+  model: z.string(),
+  summary: z.string().max(200).nullable(),
+  predictionClaim: z.string().max(200).nullable(),
+  predictionOutcome: PredictionOutcome.nullable(),
   inputTokens: z.number().int(),
   outputTokens: z.number().int(),
 })
-export type ClassifiedRecord = z.infer<typeof ClassifiedRecord>
+export type EnrichedRecord = z.infer<typeof EnrichedRecord>
 
 // stage recap → recaps.jsonl
 export const RecapRecord = z.object({
@@ -183,6 +206,7 @@ export const STAGES = [
   'episodes',
   'attribute',
   'classify',
+  'enrich',
   'load',
   'stats',
   'recap',
