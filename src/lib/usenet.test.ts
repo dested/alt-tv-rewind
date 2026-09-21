@@ -61,6 +61,33 @@ test('nested >> quote becomes a depth-2 quote block', () => {
   expect(nested.depth).toBe(2)
 })
 
+test('colon and pipe quoting count as quote markers; ": >" nests', () => {
+  const body = [
+    'GKline wrote:',
+    ': In article, Sue says...',
+    ': >Whoa! Are we going a little too far here?',
+    ": Hey! If you don't like what happens, don't watch.",
+    '',
+    'I think it was just plain morbid.',
+    '',
+    '| Pipe quoting too.',
+    ':smile: is not a quote',
+    '|--- neither is this',
+  ].join('\n')
+  const blocks = parseMessage(body)
+  const quotes = only(blocks, 'quote')
+  expect(quotes.length).toBe(2)
+  const first = quotes[0]!
+  if (first.type !== 'quote') throw new Error('expected quote')
+  expect(first.lineCount).toBe(3)
+  const nested = first.blocks.find((b) => b.type === 'quote')
+  if (!nested || nested.type !== 'quote') throw new Error('expected nested quote')
+  expect(nested.depth).toBe(2)
+  const paragraphs = only(blocks, 'paragraph').map((b) => (b.type === 'paragraph' ? b.text : ''))
+  expect(paragraphs.some((t) => t.includes(':smile: is not a quote'))).toBe(true)
+  expect(paragraphs.some((t) => t.includes('|--- neither is this'))).toBe(true)
+})
+
 test('-- signature drops rule lines and redacts the email', () => {
   const body = [
     'The finale was fine.',

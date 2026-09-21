@@ -250,9 +250,13 @@ function flushRun(lines: string[], blocks: Block[]): void {
 
 // --- quotes ---------------------------------------------------------------
 
-const QUOTE_LINE = /^\s{0,3}(?:>[ ]?)+/
-const STRIP_ONE = /^(\s{0,3})>[ ]?/
-const STRIP_ALL = /^(\s{0,3})(?:>[ ]?)+/
+// `>` is the marker; `:` and `|` were period conventions too (~3% of posts) but
+// only count when followed by a space or another marker, so ":smile" and
+// "|---" table rules stay prose/pre.
+const QUOTE_MARK = String.raw`(?:>[ ]?|[|:](?=[ >|:]))`
+const QUOTE_LINE = new RegExp(String.raw`^\s{0,3}${QUOTE_MARK}+`)
+const STRIP_ONE = new RegExp(String.raw`^(\s{0,3})${QUOTE_MARK}[ ]?`)
+const STRIP_ALL = new RegExp(String.raw`^(\s{0,3})${QUOTE_MARK}+[ ]?`)
 
 function makeQuote(src: string[], nesting: number, attribution: string | null): Block {
   const depth = nesting + 1

@@ -2,6 +2,12 @@
 
 > Terse, newest-first log: what was asked → what was done. One entry per finished task.
 
+## 2026-09-21 — Thread page: Transcript / Reply chains toggle; colon and pipe quoting
+
+Ask: "wait i still like seeing the reply chains — support both views".
+Done: `?view=tree` on the thread page renders nested reply chains (22px avatar header row, rail `ml-[0.6875rem] border-l pl-5`, indent capped at depth 6, collapse buttons with descendant counts); default stays the flat transcript; switcher pills on the top rule line; same `#m{id}` anchors in both. Parser now treats `: ` and `| ` as quote markers when followed by a space or another marker (3% of posts used colon quoting and rendered as one run-on paragraph). Search snippet regexp fix from the previous entry verified live.
+Touched: src/app/thread.tsx, src/components/avatar.tsx, src/lib/usenet.ts (+test), ui.md, cliffnotes.md.
+
 ## 2026-09-21 — Paper redesign v3, transcript threads, stable thread slugs, five more shows
 
 Ask: "i hate this brutalist look… make it modern… feel like 90s but not tacky"; then "too far indented… no color changing, make it light. pick a design"; plus "in another agent do: southpark futurama family-guy beavis-n-butthead daria".

@@ -76,7 +76,9 @@ Self-hosted variable fonts (already installed; imported in `app.css`): `@fontsou
 
 **Shell** (`src/app/layout.tsx`): `<header>` with `border-t-4 border-brand` on top; inside, a `max-w-5xl` row: wordmark · `/` · show name (`text-link`) · People · right: pill search (`bg-secondary rounded-full h-9 pl-9`), Sign out (admin). Under the row a `border-b-2 border-rule` (heavy ink rule) — masthead done. Main `max-w-5xl px-6 py-10`. Footer: hairline + one muted sentence. **No theme toggle.**
 
-**Thread** `/:show/thread/:id` — the transcript:
+**Thread** `/:show/thread/:slug` — two views, switched by `?view=` (default transcript; `view=tree` for reply chains). The switcher sits on the top rule line, right-aligned: two pills styled exactly like `FilterTabs` ("Transcript" · "Reply chains"), the post count muted on the left. The URL param is the state (SSR-safe, shareable, no hydration flip); nothing is stored client-side.
+
+The transcript view:
 
 1. Title (serif `text-4xl`), then meta line: episode chip (`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs text-link hover:bg-link-soft`, text "S04E01 The Trip (1)" + `live`/`retro` muted) · `formatDateTime(startedAt, startedDateOnly)` · `relativeToAir` · "5 posts by 5 posters". Chips row. Summary `text-sm text-muted-foreground max-w-[66ch]`; prediction claim serif italic.
 2. A 1.5px rule, then the messages in **tree order (depth-first, as `buildTree` yields), flat**:
@@ -86,6 +88,12 @@ Self-hosted variable fonts (already installed; imported in `app.css`): `@fontsou
    - A message that is the target of an anchor (`:target`) gets `bg-link-soft` on the article (CSS `article:target { background: var(--link-soft) }`), so "↩ name" clicks visibly land.
 3. No collapse toggles, no rails, no indentation. Long threads just scroll; the truncation note stays.
 4. Admin "Fix episode" panel under the meta line when a session exists.
+
+The reply-chains view (same `<article id="m{id}">` ids, so anchors work in both):
+
+1. Each message is a compact stack: header row `flex flex-wrap items-baseline gap-x-2` — `Avatar` 22px · name link · `<time>` muted xs · when it has replies a `text-link text-xs` button ("− collapse" / "+ 12 replies"); body `MessageBody` below (`mt-1.5`).
+2. Children nest inside `ml-[0.6875rem] border-l pl-5` (rail centered under the avatar). Indentation stops at depth 6 — deeper replies keep their order but no further rail. That is the whole indent budget; never widen it (owner: "too far indented by a lot").
+3. Collapse is component state only, kept while switching views; no "↩ name" pointer here — the rail carries the relationship.
 
 **Episode** `/:show/:episode`:
 
@@ -109,7 +117,7 @@ Self-hosted variable fonts (already installed; imported in `app.css`): `@fontsou
 
 | Component | File | Notes |
 | --- | --- | --- |
-| `Avatar` | `src/components/avatar.tsx` | 28/36px monogram, per-poster hue via `posterHue` |
+| `Avatar` | `src/components/avatar.tsx` | 22/28/36px monogram, per-poster hue via `posterHue` |
 | `MessageBody` | `src/components/message-body.tsx` | renders `parseMessage` blocks; quote chips (`Quoting {name} · n lines` / `Quoted text · n lines`) |
 | `ThreadRow` | `src/components/thread-row.tsx` | ruled list row (replaces `ThreadCard`; delete `thread-card.tsx`) |
 | `Badge` | `src/components/badge.tsx` | `rounded-md px-2 py-0.5 text-xs font-medium`; neutral `bg-secondary`, brand `bg-brand/12 text-brand`, bad `bg-destructive/12 text-destructive`, outline `border text-muted-foreground` |

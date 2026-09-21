@@ -1,22 +1,38 @@
-import { Fragment, type ReactNode } from 'react'
-import { Link, useParams, useRouteLoaderData } from 'react-router-dom'
+import { Fragment, useState, type ReactNode } from 'react'
+import { Link, useParams, useRouteLoaderData, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTRPC } from '~/lib/trpc'
 import { AdminFixEpisode } from '~/components/admin-fix-episode'
 import { Avatar } from '~/components/avatar'
 import { Badge } from '~/components/badge'
 import { MessageBody } from '~/components/message-body'
-import { buildTree } from '~/lib/thread-tree'
+import { buildTree, type Node } from '~/lib/thread-tree'
 import { KIND, PREDICTION_OUTCOME, SENTIMENT } from '~/lib/taxonomy'
 import { episodeCode, formatDateTime, formatNumber, plural, relativeToAir } from '~/lib/format'
 import { stripRe, threadOrder } from '~/lib/usenet'
+import { cn } from '~/lib/utils'
 import type { RootLoaderData } from './routes'
+
+// Deeper replies stop indenting but keep their reply order (see ui.md "Thread").
+const MAX_INDENT_DEPTH = 6
+
+function descendantCount(node: Node): number {
+  let count = 0
+  for (const child of node.children) count += 1 + descendantCount(child)
+  return count
+}
 
 export function ThreadPage() {
   const { show, slug } = useParams()
   const trpc = useTRPC()
   const rootData = useRouteLoaderData('root') as RootLoaderData | undefined
   const session = rootData?.session ?? null
+  const [params, setParams] = useSearchParams()
+  // The chosen view rides a URL param so SSR and the first client render agree —
+  // no hydration flip and the choice is shareable.
+  const view: 'transcript' | 'tree' = params.get('view') === 'tree' ? 'tree' : 'transcript'
+  // Collapse state lives here so switching views keeps it.
+  const [collapsed, setCollapsed] = useState<Set<number>>(new Set())
 
   const threadQuery = useQuery(
     trpc.threads.get.queryOptions(
@@ -121,40 +137,200 @@ export function ThreadPage() {
         </p>
       )}
 
-      <div className="border-rule mt-8 border-t-[1.5px]">
-        {ordered.map((node) => {
-          const m = node.message
-          const parent = m.parentId === null ? undefined : byId.get(m.parentId)
-          return (
-            <article
-              key={m.id}
-              id={`m${m.id}`}
-              className="grid gap-x-6 gap-y-2 border-b py-6 last:border-b-0 sm:grid-cols-[11rem_1fr]">
-              <div className="flex items-center gap-2 sm:block sm:text-right">
-                <span className="sm:mb-1.5 sm:ml-auto sm:block">
-                  <Avatar name={m.poster.displayName} size={28} />
-                </span>
-                <Link
-                  to={`/${showSlug}/people/${m.poster.id}`}
-                  className="text-link text-sm font-semibold hover:underline">
-                  {m.poster.displayName}
-                </Link>
-                <time className="text-muted-foreground text-xs sm:block">
-                  {formatDateTime(m.postedAt, m.dateOnly)}
-                </time>
-                {parent && (
-                  <a href={`#m${m.parentId}`} className="text-link text-xs sm:block">
-                    ↩ {parent.message.poster.displayName}
-                  </a>
-                )}
-              </div>
-              <div className="min-w-0">
-                <MessageBody body={m.body} />
-              </div>
-            </article>
-          )
-        })}
+      <div className="border-rule mt-8 flex items-center justify-between border-t-[1.5px] pt-3">
+        <span className="text-muted-foreground text-sm">{plural(thread.messageCount, 'post')}</span>
+        <div role="tablist" className="flex gap-1.5">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'transcript'}
+            onClick={() => changeView('transcript')}
+            className={cn(
+              'rounded-full px-3 py-1 text-sm transition-colors',
+              view === 'transcript'
+                ? 'bg-foreground text-background'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+            )}>
+            Transcript
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'tree'}
+            onClick={() => changeView('tree')}
+            className={cn(
+              'rounded-full px-3 py-1 text-sm transition-colors',
+              view === 'tree'
+                ? 'bg-foreground text-background'
+                : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+            )}>
+            Reply chains
+          </button>
+        </div>
+      </div>
+      <div className="mt-3">
+        {view === 'tree' ? (
+          <TreeView roots={roots} collapsed={collapsed} toggle={toggle} showSlug={showSlug} />
+        ) : (
+          <TranscriptView ordered={ordered} byId={byId} showSlug={showSlug} />
+        )}
       </div>
     </div>
+  )
+
+  function changeView(next: 'transcript' | 'tree') {
+    setParams(
+      (prev) => {
+        const p = new URLSearchParams(prev)
+        if (next === 'transcript') p.delete('view')
+        else p.set('view', 'tree')
+        return p
+      },
+      { replace: true, preventScrollReset: true }
+    )
+  }
+
+  function toggle(id: number) {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+}
+
+function TranscriptView({
+  ordered,
+  byId,
+  showSlug,
+}: {
+  ordered: Node[]
+  byId: Map<number, Node>
+  showSlug: string
+}) {
+  return (
+    <>
+      {ordered.map((node) => {
+        const m = node.message
+        const parent = m.parentId === null ? undefined : byId.get(m.parentId)
+        return (
+          <article
+            key={m.id}
+            id={`m${m.id}`}
+            className="grid gap-x-6 gap-y-2 border-b py-6 last:border-b-0 sm:grid-cols-[11rem_1fr]">
+            <div className="flex items-center gap-2 sm:block sm:text-right">
+              <span className="sm:mb-1.5 sm:ml-auto sm:block">
+                <Avatar name={m.poster.displayName} size={28} />
+              </span>
+              <Link
+                to={`/${showSlug}/people/${m.poster.id}`}
+                className="text-link text-sm font-semibold hover:underline">
+                {m.poster.displayName}
+              </Link>
+              <time className="text-muted-foreground text-xs sm:block">
+                {formatDateTime(m.postedAt, m.dateOnly)}
+              </time>
+              {parent && (
+                <a href={`#m${m.parentId}`} className="text-link text-xs sm:block">
+                  ↩ {parent.message.poster.displayName}
+                </a>
+              )}
+            </div>
+            <div className="min-w-0">
+              <MessageBody body={m.body} />
+            </div>
+          </article>
+        )
+      })}
+    </>
+  )
+}
+
+function TreeView({
+  roots,
+  collapsed,
+  toggle,
+  showSlug,
+}: {
+  roots: Node[]
+  collapsed: Set<number>
+  toggle: (id: number) => void
+  showSlug: string
+}) {
+  return (
+    <>
+      {roots.map((node) => (
+        <TreeNode
+          key={node.message.id}
+          node={node}
+          depth={0}
+          collapsed={collapsed}
+          toggle={toggle}
+          showSlug={showSlug}
+        />
+      ))}
+    </>
+  )
+}
+
+function TreeNode({
+  node,
+  depth,
+  collapsed,
+  toggle,
+  showSlug,
+}: {
+  node: Node
+  depth: number
+  collapsed: Set<number>
+  toggle: (id: number) => void
+  showSlug: string
+}) {
+  const m = node.message
+  const isCollapsed = collapsed.has(m.id)
+  return (
+    <article id={`m${m.id}`} className="py-4">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <Avatar name={m.poster.displayName} size={22} />
+        <Link
+          to={`/${showSlug}/people/${m.poster.id}`}
+          className="text-link text-sm font-semibold hover:underline">
+          {m.poster.displayName}
+        </Link>
+        <time className="text-muted-foreground text-xs">
+          {formatDateTime(m.postedAt, m.dateOnly)}
+        </time>
+        {node.children.length > 0 && (
+          <button
+            type="button"
+            onClick={() => toggle(m.id)}
+            className="text-link text-xs"
+            aria-expanded={!isCollapsed}>
+            {isCollapsed ? `+ ${plural(descendantCount(node), 'reply')}` : '− collapse'}
+          </button>
+        )}
+      </div>
+      <div className="mt-1.5 min-w-0">
+        <MessageBody body={m.body} />
+      </div>
+      {!isCollapsed && node.children.length > 0 && (
+        <div
+          className={
+            depth < MAX_INDENT_DEPTH ? 'border-border mt-1 ml-[0.6875rem] border-l pl-5' : 'mt-1'
+          }>
+          {node.children.map((child) => (
+            <TreeNode
+              key={child.message.id}
+              node={child}
+              depth={depth + 1}
+              collapsed={collapsed}
+              toggle={toggle}
+              showSlug={showSlug}
+            />
+          ))}
+        </div>
+      )}
+    </article>
   )
 }
