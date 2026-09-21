@@ -6,7 +6,8 @@ import { prisma } from '../prisma'
 import { iso } from './shared'
 
 // ts_headline marks hits with the control chars U+0001 / U+0002 so the client
-// can HTML-escape the fragment first, then swap the markers for <mark>.
+// can HTML-escape the fragment first, then swap the markers for <mark>. The
+// snippet source strips quoted lines, mirroring the index trigger.
 const HEADLINE_OPTIONS = 'MaxFragments=2, MaxWords=18, MinWords=8, StartSel=, StopSel='
 const RESULTS_LIMIT = 300
 const HITS_PER_THREAD = 3
@@ -75,7 +76,7 @@ export const searchRouter = router({
 
       const raw = await prisma.$queryRaw`
         SELECT m.id, m.thread_id AS "threadId", m.posted_at AS "postedAt", p.display_name AS "posterName",
-               ts_headline('english', left(m.body, 4000), q, ${HEADLINE_OPTIONS}) AS snippet,
+               ts_headline('english', regexp_replace(left(m.body, 6000), '(^|\n)[ \t]*(>|\|)[^\n]*', ' ', 'g'), q, ${HEADLINE_OPTIONS}) AS snippet,
                ts_rank_cd(m.search, q) AS rank
         FROM message m
         JOIN thread t ON t.id = m.thread_id
