@@ -4,10 +4,11 @@ import { router, publicProcedure } from '../trpc'
 import { prisma } from '../prisma'
 import { episodeCardSelect, toEpisodeCard, iso, isoOrNull, type EpisodeCard } from './shared'
 
-const REACTION_CURVE_FROM = -6
-const REACTION_CURVE_TO = 96
+// Day resolution, not hours: most 1995–2000 posts carry no time of day.
+const REACTION_DAY_FROM = -1
+const REACTION_DAY_TO = 14
 
-const reactionRowSchema = z.object({ hour: z.number().int(), messages: z.number().int() })
+const reactionRowSchema = z.object({ day: z.number().int(), messages: z.number().int() })
 
 export const episodesRouter = router({
   list: publicProcedure
@@ -103,34 +104,32 @@ export const episodesRouter = router({
             pullQuoteMessageId: true,
             rootMessageId: true,
             startedAt: true,
+            startedDateOnly: true,
           },
         }),
       ])
 
-      // Hourly reaction curve over this episode's live primary threads. Only
-      // meaningful with an airStamp; buckets outside the window are dropped and
-      // every hour in [-6, 96] is emitted (zeros filled).
-      let reactionCurve: Array<{ hour: number; messages: number }> = []
-      if (ep.airStamp !== null) {
-        const raw = await prisma.$queryRaw`
-          SELECT floor(extract(epoch FROM (m.posted_at - e.air_stamp)) / 3600)::int AS hour,
-                 count(*)::int AS messages
-          FROM message m
-          JOIN thread_episode te
-            ON te.thread_id = m.thread_id
-           AND te.episode_id = ${ep.id}
-           AND te.is_primary
-           AND te.relation = 'live'::"EpisodeRelation"
-          JOIN episode e ON e.id = te.episode_id
-          WHERE NOT m.is_spam AND e.air_stamp IS NOT NULL
-          GROUP BY hour
-        `
-        const parsed = z.array(reactionRowSchema).parse(raw)
-        const byHour = new Map(parsed.map((r) => [r.hour, r.messages]))
-        reactionCurve = []
-        for (let hour = REACTION_CURVE_FROM; hour <= REACTION_CURVE_TO; hour++) {
-          reactionCurve.push({ hour, messages: byHour.get(hour) ?? 0 })
-        }
+      // Posts per calendar day (network zone) after the air date, over this
+      // episode's live primary threads. Date-only posts sit at 12:00Z, which is
+      // the same ET date, so they bucket correctly. Every day in [-1, 14] is
+      // emitted with zeros filled.
+      const rawByDay = await prisma.$queryRaw`
+        SELECT ((m.posted_at AT TIME ZONE 'UTC' AT TIME ZONE 'America/New_York')::date - e.air_date)::int AS day,
+               count(*)::int AS messages
+        FROM message m
+        JOIN thread_episode te
+          ON te.thread_id = m.thread_id
+         AND te.episode_id = ${ep.id}
+         AND te.is_primary
+         AND te.relation = 'live'::"EpisodeRelation"
+        JOIN episode e ON e.id = te.episode_id
+        WHERE NOT m.is_spam
+        GROUP BY day
+      `
+      const byDay = new Map(z.array(reactionRowSchema).parse(rawByDay).map((r) => [r.day, r.messages]))
+      const reactionByDay: Array<{ day: number; messages: number }> = []
+      for (let day = REACTION_DAY_FROM; day <= REACTION_DAY_TO; day++) {
+        reactionByDay.push({ day, messages: byDay.get(day) ?? 0 })
       }
 
       // Resolve each quote's attributed message (pull_quote_message_id, else the
@@ -142,7 +141,12 @@ export const episodesRouter = router({
       const quoteMessages = quoteMessageIds.length
         ? await prisma.message.findMany({
             where: { id: { in: quoteMessageIds } },
-            select: { id: true, postedAt: true, poster: { select: { displayName: true } } },
+            select: {
+              id: true,
+              postedAt: true,
+              dateOnly: true,
+              poster: { select: { displayName: true } },
+            },
           })
         : []
       const messageById = new Map(quoteMessages.map((m) => [m.id, m]))
@@ -158,6 +162,7 @@ export const episodesRouter = router({
             pullQuote: t.pullQuote,
             posterName: msg?.poster.displayName ?? null,
             postedAt: msg ? iso(msg.postedAt) : iso(t.startedAt),
+            postedDateOnly: msg ? msg.dateOnly : t.startedDateOnly,
           },
         ]
       })
@@ -180,7 +185,7 @@ export const episodesRouter = router({
         },
         prev,
         next,
-        reactionCurve,
+        reactionByDay,
         breakdown: {
           kinds: kindGroups
             .flatMap((g) => (g.kind === null ? [] : [{ kind: g.kind, count: g._count._all }]))

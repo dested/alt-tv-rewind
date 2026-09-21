@@ -52,6 +52,7 @@ export type ThreadCard = {
   id: number
   subject: string
   startedAt: string
+  startedDateOnly: boolean // the opener's header had no time of day
   lastPostAt: string
   messageCount: number
   posterCount: number
@@ -73,7 +74,21 @@ export type ThreadCard = {
     relation: 'live' | 'retro'
     confidence: number
   } | null
-  hoursAfterAir: number | null
+  hoursAfterAir: number | null // null unless the opener's hour is real and the episode has an airStamp
+  daysAfterAir: number | null // calendar days (network zone) between air date and the opener
+}
+
+// 'YYYY-MM-DD' of an instant in the network's zone (en-CA renders ISO order).
+const etDate = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+export function daysBetweenAirAndPost(airDate: Date, postedAt: Date): number {
+  const postedDay = Date.parse(`${etDate.format(postedAt)}T00:00:00Z`)
+  return Math.round((postedDay - airDate.getTime()) / 86_400_000)
 }
 
 // ───────────────────────── archive summary ─────────────────────────
@@ -146,6 +161,7 @@ export const threadCardSelect = {
   id: true,
   subject: true,
   startedAt: true,
+  startedDateOnly: true,
   lastPostAt: true,
   messageCount: true,
   posterCount: true,
@@ -165,7 +181,14 @@ export const threadCardSelect = {
       relation: true,
       confidence: true,
       episode: {
-        select: { slug: true, title: true, seasonNumber: true, number: true, airStamp: true },
+        select: {
+          slug: true,
+          title: true,
+          seasonNumber: true,
+          number: true,
+          airStamp: true,
+          airDate: true,
+        },
       },
     },
   },
@@ -189,13 +212,15 @@ function toThreadCard(r: ThreadCardRow, starter: Starter): ThreadCard {
     : null
   const airStamp = primary?.episode.airStamp ?? null
   const hoursAfterAir =
-    airStamp === null
+    airStamp === null || r.startedDateOnly
       ? null
       : Math.round(((r.startedAt.getTime() - airStamp.getTime()) / 3_600_000) * 10) / 10
+  const daysAfterAir = primary ? daysBetweenAirAndPost(primary.episode.airDate, r.startedAt) : null
   return {
     id: r.id,
     subject: r.subject,
     startedAt: iso(r.startedAt),
+    startedDateOnly: r.startedDateOnly,
     lastPostAt: iso(r.lastPostAt),
     messageCount: r.messageCount,
     posterCount: r.posterCount,
@@ -211,6 +236,7 @@ function toThreadCard(r: ThreadCardRow, starter: Starter): ThreadCard {
     starter,
     episode,
     hoursAfterAir,
+    daysAfterAir,
   }
 }
 
