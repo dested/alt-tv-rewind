@@ -60,7 +60,7 @@ Self-hosted variable fonts (already installed; imported in `app.css`): `@fontsou
 | Thread subject in a list row | `font-serif text-xl font-medium leading-snug` | |
 | Section heading | `font-serif text-2xl font-semibold tracking-tight` **preceded by a 1.5px rule** (`border-t-[1.5px] border-rule pt-3`) | the heavy rule above each section is the signature device of the listing pages |
 | Meta line | `text-sm text-muted-foreground` | below titles; segments separated by ` · ` |
-| Post body | `.post` = `font-serif text-[1.125rem] leading-[1.6]`, paragraphs `space-y-3`, `max-w-[66ch]` | reading register |
+| Post body | `.post` = `font-serif text-[1.125rem] leading-[1.6]`, paragraphs `space-y-3`, `max-w-[66ch]`, `overflow-wrap: anywhere` | reading register; unbroken 1990s URLs must never widen a phone page |
 | Gutter name | `font-sans text-sm font-semibold text-link` | transcript left column |
 | Gutter date / pointer | `font-sans text-xs text-muted-foreground` / `text-link` | |
 | Folded quote chip | `font-sans text-xs text-muted-foreground` | "Quoting Mark Collins · 5 lines" |
@@ -95,6 +95,8 @@ The reply-chains view (same `<article id="m{id}">` ids, so anchors work in both)
 2. Children nest inside `ml-[0.6875rem] border-l pl-5` (rail centered under the avatar). Indentation stops at depth 6 — deeper replies keep their order but no further rail. That is the whole indent budget; never widen it (owner: "too far indented by a lot").
 3. Collapse is component state only, kept while switching views; no "↩ name" pointer here — the rail carries the relationship.
 
+**Source & timing gutter** (both views): under each post's `<time>`, a compact `SourceLine` names the community it came from (transcript `sm:block`; tree inline in the header row), linking to the preserved record when one exists else `/sources/:key`, with ` +n` when the post is a crosspost. Beside it a `text-xs text-muted-foreground` timing note appears only when the post disagrees with the thread's relation — `later reply` (a later post inside a live thread), `before it aired`, or `date inherited` (the header carried no date). The thread meta line gains a plain segment: `N communities` when the thread spans several, else the single source name.
+
 **Episode** `/:show/:episode`:
 
 1. Header grid `md:grid-cols-[1fr_22rem] gap-8 items-end`: left — a row with the **episode numeral** ("S07 E24", brand, light weight) and the title on one baseline (`flex flex-wrap items-baseline gap-x-5`), then the meta line ("Aired Thursday, May 16, 1996 · NBC · 22 min"); right — the still, `aspect-video object-cover` with `border border-border` (a thin print frame), no radius. When no still, the left spans.
@@ -119,7 +121,8 @@ The reply-chains view (same `<article id="m{id}">` ids, so anchors work in both)
 | --- | --- | --- |
 | `Avatar` | `src/components/avatar.tsx` | 22/28/36px monogram, per-poster hue via `posterHue` |
 | `MessageBody` | `src/components/message-body.tsx` | renders `parseMessage` blocks; quote chips (`Quoting {name} · n lines` / `Quoted text · n lines`) |
-| `ThreadRow` | `src/components/thread-row.tsx` | ruled list row (replaces `ThreadCard`; delete `thread-card.tsx`) |
+| `SourceLine` | `src/components/source-line.tsx` | where a post lives. Full mode: source name + links (Original post/document · Archived copy · Archive collection · Preserved record · Browse source · N captures), `·`-joined, `text-muted-foreground text-xs`, links `text-link`. Compact mode (gutters): source name only (→ preserved record when public, else `/sources/:key`) + ` +n` crosspost hint |
+| `ThreadRow` | `src/components/thread-row.tsx` | ruled list row (replaces `ThreadCard`; delete `thread-card.tsx`); meta line ends with the source name |
 | `Badge` | `src/components/badge.tsx` | `rounded-md px-2 py-0.5 text-xs font-medium`; neutral `bg-secondary`, brand `bg-brand/12 text-brand`, bad `bg-destructive/12 text-destructive`, outline `border text-muted-foreground` |
 | `FilterTabs` | `src/components/filter-tabs.tsx` | pills as above |
 | `EpisodeCard` | `src/components/episode-card.tsx` | frameless tile |

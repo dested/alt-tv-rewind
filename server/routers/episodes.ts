@@ -8,8 +8,17 @@ import {
   iso,
   isoOrNull,
   daysBetweenAirAndPost,
+  sourceRefSelect,
   type EpisodeCard,
+  type SourceRef,
 } from './shared'
+
+// A compiled-document's revision line, stored raw ("E, 22-Feb-97") in the
+// record's metadata; never rendered as a date. Null when absent or malformed.
+function revisionOf(metadata: unknown): string | null {
+  const parsed = z.object({ revision: z.object({ raw: z.string() }) }).safeParse(metadata)
+  return parsed.success ? parsed.data.revision.raw : null
+}
 
 // Day resolution, not hours: most 1995–2000 posts carry no time of day.
 const REACTION_DAY_FROM = -1
@@ -55,7 +64,8 @@ export const episodesRouter = router({
       })
       if (!ep) throw new TRPCError({ code: 'NOT_FOUND' })
 
-      const [prev, next, kindGroups, sentimentGroups, quoteThreads, archive] = await Promise.all([
+      const [prev, next, kindGroups, sentimentGroups, quoteThreads, archive, threadSources, docRows] =
+        await Promise.all([
         prisma.episode.findFirst({
           where: {
             showId: ep.showId,
@@ -118,6 +128,27 @@ export const episodesRouter = router({
         prisma.archive.findFirst({
           where: { showId: ep.showId },
           select: { firstPostAt: true },
+        }),
+        // Communities that fed this episode (both relations), for the source filter.
+        prisma.thread.findMany({
+          where: { isSpam: false, episodes: { some: { episodeId: ep.id, isPrimary: true } } },
+          select: { archive: { select: { source: { select: sourceRefSelect } } } },
+        }),
+        // Compiled capsule documents catalogued against this episode.
+        prisma.recordShow.findMany({
+          where: { episodeId: ep.id, status: 'accepted', record: { kind: 'compiled_document' } },
+          select: {
+            record: {
+              select: {
+                recordId: true,
+                title: true,
+                originalUrl: true,
+                metadata: true,
+                source: { select: sourceRefSelect },
+                _count: { select: { contributions: true } },
+              },
+            },
+          },
         }),
       ])
 
@@ -194,9 +225,38 @@ export const episodesRouter = router({
         ]
       })
 
+      const sourceCounts = new Map<string, { ref: SourceRef; threadCount: number }>()
+      for (const t of threadSources) {
+        const s = t.archive.source
+        if (!s) continue
+        const cur = sourceCounts.get(s.key)
+        if (cur) cur.threadCount += 1
+        else sourceCounts.set(s.key, { ref: { key: s.key, name: s.name, kind: s.kind }, threadCount: 1 })
+      }
+      const sources = [...sourceCounts.values()]
+        .sort((a, b) => b.threadCount - a.threadCount || a.ref.name.localeCompare(b.ref.name))
+        .map((s) => ({ ...s.ref, threadCount: s.threadCount }))
+
+      const documents = docRows
+        .map((r) => ({
+          recordId: r.record.recordId,
+          title: r.record.title,
+          originalUrl: r.record.originalUrl,
+          source: {
+            key: r.record.source.key,
+            name: r.record.source.name,
+            kind: r.record.source.kind,
+          },
+          contributionCount: r.record._count.contributions,
+          revision: revisionOf(r.record.metadata),
+        }))
+        .sort((a, b) => a.title.localeCompare(b.title))
+
       const episodeCard: EpisodeCard = toEpisodeCard(ep)
 
       return {
+        sources,
+        documents,
         episode: {
           ...episodeCard,
           summary: ep.summary,

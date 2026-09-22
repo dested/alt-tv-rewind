@@ -80,18 +80,18 @@ model Verification {
 // ───────────────────────── shows & episodes ─────────────────────────
 
 model Show {
-  id        Int       @id @default(autoincrement())
-  slug      String    @unique
-  name      String
-  tvmazeId  Int?      @unique @map("tvmaze_id")
-  premiered DateTime? @db.Date
-  ended     DateTime? @db.Date
-  network   String?
-  summary   String?
-  imageUrl  String?   @map("image_url")
+  id             Int       @id @default(autoincrement())
+  slug           String    @unique
+  name           String
+  tvmazeId       Int?      @unique @map("tvmaze_id")
+  premiered      DateTime? @db.Date
+  ended          DateTime? @db.Date
+  network        String?
+  summary        String?
+  imageUrl       String?   @map("image_url")
   // A thread started within this many days after an air date is "live" reaction.
-  liveWindowDays Int      @default(10) @map("live_window_days")
-  createdAt      DateTime @default(now()) @map("created_at")
+  liveWindowDays Int       @default(10) @map("live_window_days")
+  createdAt      DateTime  @default(now()) @map("created_at")
 
   seasons     Season[]
   episodes    Episode[]
@@ -99,6 +99,7 @@ model Show {
   threads     Thread[]
   phrases     Phrase[]
   dailyVolume DailyVolume[]
+  records     RecordShow[]
 
   @@map("show")
 }
@@ -130,7 +131,7 @@ model Episode {
   number       Int
   slug         String // "s07e24-the-invitations"
   title        String
-  airDate      DateTime  @db.Date @map("air_date")
+  airDate      DateTime  @map("air_date") @db.Date
   airStamp     DateTime? @map("air_stamp") // TVMaze airstamp (zoned) — drives the hourly reaction curve
   runtime      Int?
   summary      String?
@@ -151,6 +152,7 @@ model Episode {
   recapModel String? @map("recap_model")
 
   threadEpisodes ThreadEpisode[]
+  records        RecordShow[]
 
   @@unique([showId, slug])
   @@unique([showId, seasonNumber, number])
@@ -159,11 +161,16 @@ model Episode {
 
 // ───────────────────────── archive ─────────────────────────
 
+// One serving container per (show, community). Legacy rows are one newsgroup
+// per show; source-aware imports add one row per (show, source) so a shared
+// community (rec.arts.animation) can feed several shows without reassignment.
 model Archive {
   id           Int       @id @default(autoincrement())
   showId       Int       @map("show_id")
   show         Show      @relation(fields: [showId], references: [id], onDelete: Cascade)
-  newsgroup    String    @unique // "alt.tv.seinfeld"
+  sourceId     Int?      @map("source_id")
+  source       Source?   @relation(fields: [sourceId], references: [id])
+  newsgroup    String // community key: "alt.tv.seinfeld", "rec.arts.animation", "southpark.cc.com/forum"
   sourceFile   String    @map("source_file")
   messageCount Int       @default(0) @map("message_count")
   threadCount  Int       @default(0) @map("thread_count")
@@ -175,6 +182,8 @@ model Archive {
   threads  Thread[]
   messages Message[]
 
+  @@unique([showId, newsgroup])
+  @@index([sourceId])
   @@map("archive")
 }
 
@@ -232,26 +241,30 @@ enum EpisodeRelation {
 }
 
 model Thread {
-  id            Int      @id @default(autoincrement())
-  showId        Int      @map("show_id")
-  show          Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
-  archiveId     Int      @map("archive_id")
-  archive       Archive  @relation(fields: [archiveId], references: [id], onDelete: Cascade)
-  rootMessageId Int?     @unique @map("root_message_id") // no FK: set after messages load
+  id              Int      @id @default(autoincrement())
+  showId          Int      @map("show_id")
+  show            Show     @relation(fields: [showId], references: [id], onDelete: Cascade)
+  archiveId       Int      @map("archive_id")
+  archive         Archive  @relation(fields: [archiveId], references: [id], onDelete: Cascade)
+  rootMessageId   Int?     @unique @map("root_message_id") // no FK: set after messages load
   // URL identity: 12 hex of sha256(show slug + ':' + earliest message's RFC id),
   // stable across reloads (ids are not). The loader inserts a provisional
   // '~<threadKey>' and rewrites it once messages are in.
-  slug          String
-  subject       String // normalized ("Re:" stripped)
-  startedAt     DateTime @map("started_at")
+  slug            String
+  // Source-aware imports: stable conversation key ("c:<16 hex>" for Usenet
+  // conversations, "forum:<source key>:<topic id>" for native forum topics) so a
+  // re-run finds its thread instead of inserting another. Null for legacy loads.
+  importKey       String?  @map("import_key")
+  subject         String // normalized ("Re:" stripped)
+  startedAt       DateTime @map("started_at")
   // True when the earliest message's Date header had no time of day (Google's
   // export stripped it from most 1995–2000 posts); hour-level UI must not be shown.
   startedDateOnly Boolean  @default(false) @map("started_date_only")
-  lastPostAt    DateTime @map("last_post_at")
-  messageCount  Int      @map("message_count")
-  posterCount   Int      @map("poster_count")
-  maxDepth      Int      @map("max_depth")
-  isSpam        Boolean  @default(false) @map("is_spam")
+  lastPostAt      DateTime @map("last_post_at")
+  messageCount    Int      @map("message_count")
+  posterCount     Int      @map("poster_count")
+  maxDepth        Int      @map("max_depth")
+  isSpam          Boolean  @default(false) @map("is_spam")
 
   // classify stage (null until classified)
   kind               ThreadKind?
@@ -270,6 +283,7 @@ model Thread {
   messages Message[]
 
   @@unique([showId, slug])
+  @@unique([showId, importKey])
   @@index([showId, startedAt])
   @@index([showId, messageCount])
   @@index([showId, controversy])
@@ -293,23 +307,32 @@ model ThreadEpisode {
 }
 
 model Message {
-  id        Int      @id @default(autoincrement())
-  archiveId Int      @map("archive_id")
-  archive   Archive  @relation(fields: [archiveId], references: [id], onDelete: Cascade)
-  threadId  Int      @map("thread_id")
-  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
-  posterId  Int      @map("poster_id")
-  poster    Poster   @relation(fields: [posterId], references: [id])
-  parentId  Int?     @map("parent_id") // resolved from parentRef after load; no FK (parents may be missing)
-  parentRef String?  @map("parent_ref") // RFC Message-ID of the parent
-  depth     Int      @default(0)
-  messageId String   @map("message_id") // RFC Message-ID
-  subject   String
-  postedAt  DateTime @map("posted_at") // date-only headers land at 12:00:00Z of that day
-  dateOnly  Boolean  @default(false) @map("date_only")
-  body      String
-  lineCount Int      @default(0) @map("line_count")
-  isSpam    Boolean  @default(false) @map("is_spam")
+  id             Int             @id @default(autoincrement())
+  archiveId      Int             @map("archive_id")
+  archive        Archive         @relation(fields: [archiveId], references: [id], onDelete: Cascade)
+  threadId       Int             @map("thread_id")
+  thread         Thread          @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  posterId       Int             @map("poster_id")
+  poster         Poster          @relation(fields: [posterId], references: [id])
+  parentId       Int?            @map("parent_id") // resolved from parentRef after load; no FK (parents may be missing)
+  parentRef      String?         @map("parent_ref") // RFC Message-ID of the parent
+  depth          Int             @default(0)
+  messageId      String          @map("message_id") // RFC Message-ID
+  subject        String
+  postedAt       DateTime        @map("posted_at") // date-only headers land at 12:00:00Z of that day
+  dateOnly       Boolean         @default(false) @map("date_only")
+  body           String
+  lineCount      Int             @default(0) @map("line_count")
+  isSpam         Boolean         @default(false) @map("is_spam")
+  // Source-aware imports only (null for legacy rows, which carry dateOnly):
+  // the original header's precision; `unknown` means postedAt was inherited
+  // from the parent/thread and is a sort key, not an observed posting time.
+  datePrecision  DatePrecision?  @map("date_precision")
+  // Primary source record this row projects (null for legacy rows, whose
+  // source is archive.source). All memberships live in MessageSource.
+  sourceRecordId Int?            @map("source_record_id")
+  sourceRecord   SourceRecord?   @relation(fields: [sourceRecordId], references: [id])
+  sources        MessageSource[]
 
   // Maintained by the `message_search_trg` trigger (hand-written in the init
   // migration): to_tsvector('english', subject || ' ' || body).
@@ -320,6 +343,7 @@ model Message {
   @@index([threadId, postedAt])
   @@index([posterId, postedAt])
   @@index([archiveId, postedAt])
+  @@index([sourceRecordId])
   @@map("message")
 }
 
@@ -364,4 +388,252 @@ model PhraseMonthly {
 
   @@id([phraseId, month])
   @@map("phrase_monthly")
+}
+
+// ───────────────────────── source catalog ─────────────────────────
+//
+// The catalog layer is independent of show ownership: a Source is a community
+// (a newsgroup, a forum, a compilation site), an Artifact is an immutable file
+// we hold, a SourceRecord is one native post/document inside a source, an
+// Observation is every occurrence of that record in an artifact, and
+// RecordShow is the reviewed relevance of a record to a show (and episode).
+// Message/Thread stay the reader-facing projection; MessageSource links them.
+// Written by `bun run pipeline sources ...`; read by the sources router.
+
+enum SourceKind {
+  usenet
+  forum
+  capsule
+}
+
+// `metadata_only`: cataloged locally, never served as full text (redistribution
+// notice) — the app shows document metadata and the original location only.
+enum PublicationStatus {
+  public
+  metadata_only
+}
+
+enum OriginalStatus {
+  live
+  offline
+  unknown
+}
+
+enum ContentKind {
+  post
+  compiled_document
+}
+
+enum DatePrecision {
+  second
+  minute
+  day
+  unknown
+}
+
+// accepted: imported/importable as a show post. context: imported only as a
+// member of an accepted conversation (or a source-context document), never an
+// independent match. excluded / needs_review: not imported; `reason` says why.
+enum AssociationStatus {
+  accepted
+  context
+  excluded
+  needs_review
+}
+
+enum ImportStatus {
+  pending
+  imported
+  linked
+  skipped
+}
+
+enum ContributionKind {
+  review
+  observation
+  editorial
+  grade
+  quote
+  summary
+  unknown
+}
+
+model Source {
+  id                  Int               @id @default(autoincrement())
+  key                 String            @unique // "usenet-rec-arts-animation", "usenet-alt-tv-seinfeld" (legacy), "southpark-official-forum", "simpsons-archive-capsules"
+  kind                SourceKind
+  name                String // "rec.arts.animation", "South Park Forums"
+  communityKey        String            @map("community_key") // lowercase group name / site path
+  homeUrl             String?           @map("home_url") // "Browse source"
+  custodian           String? // who holds the copy we read: "Internet Archive (usenet-alt)", "Archive Team / Internet Archive"
+  collectionUrl       String?           @map("collection_url") // "Archive collection" listing
+  originalStatus      OriginalStatus    @default(unknown) @map("original_status") // are the original permalinks reachable today
+  originalCheckedAt   DateTime?         @map("original_checked_at")
+  publication         PublicationStatus @default(public)
+  notes               String[]
+  legacy              Boolean           @default(false) // loaded by the one-newsgroup pipeline, no artifact evidence
+  recordCount         Int               @default(0) @map("record_count")
+  observationCount    Int               @default(0) @map("observation_count")
+  coverageFrom        DateTime?         @map("coverage_from") @db.Date
+  coverageTo          DateTime?         @map("coverage_to") @db.Date
+  datePrecisionCounts Json?             @map("date_precision_counts")
+  createdAt           DateTime          @default(now()) @map("created_at")
+
+  archives  Archive[]
+  artifacts Artifact[]
+  records   SourceRecord[]
+
+  @@map("source")
+}
+
+model Artifact {
+  id          Int       @id @default(autoincrement())
+  sourceId    Int       @map("source_id")
+  source      Source    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  path        String // repo-relative; diagnostic only, never rendered
+  sha256      String
+  byteLength  BigInt?   @map("byte_length")
+  format      String // "mbox" | "mbox.zip" | "warc.gz" | "html" | "txt"
+  downloadUrl String?   @map("download_url")
+  custodian   String?
+  capturedAt  DateTime? @map("captured_at") // when the custodian captured it (WARC-Date)
+  retrievedAt DateTime? @map("retrieved_at") // when we downloaded it (null when not recorded)
+  verifiedAt  DateTime? @map("verified_at") // when the local hash was last checked
+  note        String?
+
+  observations Observation[]
+
+  @@unique([sourceId, path])
+  @@map("artifact")
+}
+
+model SourceRecord {
+  id                 Int           @id @default(autoincrement())
+  sourceId           Int           @map("source_id")
+  source             Source        @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  recordId           String        @unique @map("record_id") // collection id: sha256(sourceId + ':' + externalId)
+  canonicalId        String        @map("canonical_id") // "usenet:<sha256>", "forum:<source>:<post>", "document:<source>:<file>"
+  kind               ContentKind
+  externalId         String        @map("external_id") // exact-case Message-ID, native post id, filename
+  threadExternalId   String?       @map("thread_external_id")
+  identityMethod     String?       @map("identity_method") // "message-id" | "raw-sha256" | "native-id" | "filename"
+  originalUrl        String?       @map("original_url")
+  title              String
+  authorName         String?       @map("author_name") // display name only; addresses are never stored
+  authorExternalId   String?       @map("author_external_id") // forum account id (source-scoped)
+  posterKey          String?       @map("poster_key") // 16 hex; Usenet = legacy email hash, forum = source-scoped account hash
+  postedAt           DateTime?     @map("posted_at") // null when no justified instant
+  postedDate         DateTime?     @map("posted_date") @db.Date
+  datePrecision      DatePrecision @map("date_precision")
+  dateTimezone       String?       @map("date_timezone")
+  dateRaw            String?       @map("date_raw")
+  dateDerivation     String?       @map("date_derivation")
+  newsgroups         String[]
+  references         String[]
+  inReplyTo          String?       @map("in_reply_to")
+  body               String // full decoded text; served only through the app's parser/redaction and only for public sources
+  bodyLength         Int           @map("body_length")
+  contentSha256      String        @map("content_sha256")
+  hasContentConflict Boolean       @default(false) @map("has_content_conflict")
+  isSpam             Boolean       @default(false) @map("is_spam")
+  spamReason         String?       @map("spam_reason")
+  metadata           Json? // capsule documentMetadata, forum edit notice, etc.
+
+  observations  Observation[]
+  associations  RecordShow[]
+  contributions Contribution[]
+  messages      Message[]
+  memberships   MessageSource[]
+
+  @@index([canonicalId])
+  @@index([sourceId, postedDate])
+  @@index([sourceId, externalId])
+  @@index([sourceId, threadExternalId])
+  @@map("source_record")
+}
+
+model Observation {
+  id                  Int          @id @default(autoincrement())
+  observationId       String       @unique @map("observation_id")
+  recordId            Int          @map("record_id")
+  record              SourceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  artifactId          Int          @map("artifact_id")
+  artifact            Artifact     @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  locator             String // "record:<n>", "#p<id>", "document"
+  byteOffset          BigInt?      @map("byte_offset")
+  byteLength          Int?         @map("byte_length")
+  originalUrl         String?      @map("original_url")
+  capturedPageUrl     String?      @map("captured_page_url")
+  capturedAt          DateTime?    @map("captured_at")
+  retrievedAt         DateTime?    @map("retrieved_at")
+  verifiedAt          DateTime?    @map("verified_at")
+  contentSha256       String       @map("content_sha256")
+  rawSha256           String?      @map("raw_sha256")
+  warcRecordId        String?      @map("warc_record_id")
+  archiveCollectionId String?      @map("archive_collection_id")
+  archiveUrl          String?      @map("archive_url") // container the capture lives in
+  differsFromRecord   Boolean      @default(false) @map("differs_from_record") // body version differs from the canonical record text
+
+  @@index([recordId])
+  @@map("observation")
+}
+
+// One row per evaluated (record, show): every screened candidate gets a
+// disposition, with method/evidence/confidence and the conversation it rides.
+model RecordShow {
+  recordId        Int               @map("record_id")
+  record          SourceRecord      @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  showId          Int               @map("show_id")
+  show            Show              @relation(fields: [showId], references: [id], onDelete: Cascade)
+  episodeId       Int?              @map("episode_id")
+  episode         Episode?          @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+  status          AssociationStatus
+  method          String // "community" | "subject-term" | "subject-episode" | "body-term" | "conversation-context" | "official-topic" | "capsule-airdate" | "capsule-title" | "seed-only"
+  evidence        String // e.g. "subject:'family guy'; window:+1d"
+  confidence      Int? // 0–100
+  reason          String? // "spam" | "quoted_mention" | "incidental_mention" | "no_mention" | "undated" | "unresolved_episode"
+  conversationKey String?           @map("conversation_key")
+  inEra           Boolean           @default(true) @map("in_era") // original date ≤ 2009-12-31
+  importStatus    ImportStatus      @default(pending) @map("import_status")
+  messageId       Int?              @map("message_id") // projection row, once imported/linked
+  updatedAt       DateTime          @default(now()) @map("updated_at")
+
+  @@id([recordId, showId])
+  @@index([showId, status])
+  @@index([showId, episodeId])
+  @@index([showId, conversationKey])
+  @@map("record_show")
+}
+
+// Attributed pieces extracted from a compiled document (capsule). Text is
+// retained for the catalog; `publication` decides whether it may be served.
+model Contribution {
+  id               Int               @id @default(autoincrement())
+  recordId         Int               @map("record_id")
+  record           SourceRecord      @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  ordinal          Int
+  section          String // heading as printed ("Reviews", "Comments and other observations")
+  kind             ContributionKind
+  attribution      String? // exactly as printed; null when unattributed
+  text             String
+  textSha256       String            @map("text_sha256")
+  spanStart        Int               @map("span_start") // offsets into SourceRecord.body
+  spanEnd          Int               @map("span_end")
+  extractionStatus String            @map("extraction_status") // "extracted" | "unrecognized_layout"
+  publication      PublicationStatus @default(metadata_only)
+
+  @@unique([recordId, ordinal])
+  @@map("contribution")
+}
+
+model MessageSource {
+  messageId Int          @map("message_id")
+  message   Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  recordId  Int          @map("record_id")
+  record    SourceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  role      String // "primary" | "additional"
+
+  @@id([messageId, recordId])
+  @@index([recordId], map: "message_source_by_record_idx")
+  @@map("message_source")
 }

@@ -60,10 +60,22 @@ const BASE_ARRAY_TYPES = new Set([
   'uuid',
 ])
 
-function unnestExpr(col: ColumnSpec, paramIndex: number): string {
+// Per-column expression over the row-aligned `unnest($1::T[], $2::T[], …) AS u(c1, c2, …)`
+// source. Enums arrive as text and are cast per element; `text[]` columns arrive as
+// jsonb (one JSON array string per row) and are unpacked per row, since a nested
+// Postgres array would be flattened by unnest.
+function columnExpr(col: ColumnSpec, i: number): string {
   const t = col.type.toLowerCase()
-  if (BASE_ARRAY_TYPES.has(t)) return `unnest($${paramIndex}::${col.type}[])`
-  return `unnest($${paramIndex}::text[])::"${col.type}"`
+  if (t === 'text[]') return `ARRAY(SELECT jsonb_array_elements_text(u.c${i}))`
+  if (BASE_ARRAY_TYPES.has(t)) return `u.c${i}`
+  return `u.c${i}::"${col.type}"`
+}
+
+function paramCast(col: ColumnSpec): string {
+  const t = col.type.toLowerCase()
+  if (t === 'text[]') return 'jsonb[]'
+  if (BASE_ARRAY_TYPES.has(t)) return `${col.type}[]`
+  return 'text[]'
 }
 
 const BATCH = 2000
@@ -87,10 +99,12 @@ export async function insertRows<Out extends Record<string, unknown> = Record<st
   if (rows.length === 0) return []
 
   const colList = columns.map((col) => `"${col.name}"`).join(', ')
-  const selectList = columns.map((col, i) => unnestExpr(col, i + 1)).join(', ')
+  const selectList = columns.map((col, i) => columnExpr(col, i + 1)).join(', ')
+  const unnestArgs = columns.map((col, i) => `$${i + 1}::${paramCast(col)}`).join(', ')
+  const aliases = columns.map((_, i) => `c${i + 1}`).join(', ')
   const conflict = opts?.onConflict ? ` ${opts.onConflict}` : ''
   const returning = opts?.returning?.length ? ` RETURNING ${opts.returning.map((r) => `"${r}"`).join(', ')}` : ''
-  const sql = `INSERT INTO "${table}" (${colList}) SELECT ${selectList}${conflict}${returning}`
+  const sql = `INSERT INTO "${table}" (${colList}) SELECT ${selectList} FROM unnest(${unnestArgs}) AS u(${aliases})${conflict}${returning}`
 
   const out: Out[] = []
   for (let start = 0; start < rows.length; start += BATCH) {
@@ -98,7 +112,8 @@ export async function insertRows<Out extends Record<string, unknown> = Record<st
     const params: unknown[] = columns.map((col) =>
       batch.map((row) => {
         const v = row[col.name]
-        return v === undefined ? null : v
+        if (v === undefined) return null
+        return col.type.toLowerCase() === 'text[]' ? JSON.stringify(v) : v
       }),
     )
     const res = await c.query(sql, params)

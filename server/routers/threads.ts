@@ -3,7 +3,19 @@ import { TRPCError } from '@trpc/server'
 import { Prisma } from '@prisma/client'
 import { router, publicProcedure } from '../trpc'
 import { prisma } from '../prisma'
-import { threadCardSelect, mapThreadCards, relationInput, iso, type ThreadCard } from './shared'
+import {
+  threadCardSelect,
+  mapThreadCards,
+  relationInput,
+  iso,
+  sourceLocationSourceSelect,
+  sourceLocationFor,
+  postTimingFor,
+  type ThreadCard,
+  type SourceRef,
+  type SourceLocation,
+  type PostTiming,
+} from './shared'
 
 const filterInput = z
   .enum(['all', 'controversial', 'loved', 'hated', 'predictions', 'theories', 'questions'])
@@ -18,6 +30,7 @@ export const threadsRouter = router({
         relation: relationInput,
         filter: filterInput,
         sort: sortInput,
+        source: z.string().optional(),
         cursor: z.number().int().min(0).default(0),
         limit: z.number().int().min(1).max(50).default(20),
       })
@@ -28,6 +41,9 @@ export const threadsRouter = router({
         episodes: {
           some: { episodeId: input.episodeId, isPrimary: true, relation: input.relation },
         },
+      }
+      if (input.source !== undefined) {
+        where.archive = { source: { key: input.source } }
       }
       switch (input.filter) {
         case 'controversial':
@@ -93,7 +109,10 @@ export const threadsRouter = router({
         prisma.thread.findUnique({
           where: { id: base.id },
           select: {
-            show: { select: { slug: true, name: true } },
+            show: { select: { slug: true, name: true, liveWindowDays: true } },
+            archive: {
+              select: { newsgroup: true, source: { select: sourceLocationSourceSelect } },
+            },
             episodes: {
               orderBy: [{ isPrimary: 'desc' }, { confidence: 'desc' }],
               select: {
@@ -125,18 +144,84 @@ export const threadsRouter = router({
             subject: true,
             postedAt: true,
             dateOnly: true,
+            datePrecision: true,
             body: true,
             lineCount: true,
             isSpam: true,
             poster: { select: { id: true, displayName: true } },
+            sourceRecord: {
+              select: {
+                recordId: true,
+                externalId: true,
+                originalUrl: true,
+                source: { select: sourceLocationSourceSelect },
+                observations: { select: { capturedAt: true, capturedPageUrl: true } },
+              },
+            },
+            _count: { select: { sources: true } },
           },
         }),
       ])
       if (!detail) throw new TRPCError({ code: 'NOT_FOUND' })
 
+      // Fallback community for a message whose archive was never backfilled with a
+      // source (should not happen with the nine legacy rows, but keeps types total).
+      const synthSource = {
+        key: 'unknown',
+        name: detail.archive.newsgroup,
+        kind: 'usenet',
+        publication: 'public',
+        homeUrl: null,
+        collectionUrl: null,
+        originalStatus: 'unknown',
+      } as const
+      const archiveSource = detail.archive.source
+      const primaryEp = detail.episodes.find((e) => e.isPrimary) ?? null
+      const liveWindowDays = detail.show.liveWindowDays
+
+      const projected = messages.map((m) => {
+        const rec = m.sourceRecord
+        const locSource = rec?.source ?? archiveSource ?? synthSource
+        const location: SourceLocation = sourceLocationFor(
+          locSource,
+          rec
+            ? { recordId: rec.recordId, externalId: rec.externalId, originalUrl: rec.originalUrl }
+            : null,
+          rec?.observations ?? []
+        )
+        const timing: PostTiming | null = primaryEp
+          ? postTimingFor(primaryEp.episode.airDate, m.postedAt, liveWindowDays, m.datePrecision)
+          : null
+        return {
+          id: m.id,
+          parentId: m.parentId,
+          depth: m.depth,
+          subject: m.subject,
+          postedAt: iso(m.postedAt),
+          dateOnly: m.dateOnly,
+          datePrecision: m.datePrecision,
+          body: m.body,
+          lineCount: m.lineCount,
+          isSpam: m.isSpam,
+          poster: { id: m.poster.id, displayName: m.poster.displayName },
+          source: location.source,
+          location,
+          additionalSourceCount: Math.max(0, m._count.sources - 1),
+          timing,
+        }
+      })
+
+      // Distinct communities across the thread, the thread's own source first.
+      const sourceByKey = new Map<string, SourceRef>()
+      if (card.source) sourceByKey.set(card.source.key, card.source)
+      for (const p of projected) {
+        if (!sourceByKey.has(p.source.key)) sourceByKey.set(p.source.key, p.source)
+      }
+
       const thread: ThreadCard & {
         showSlug: string
         showName: string
+        sources: SourceRef[]
         episodes: Array<{
           slug: string
           title: string
@@ -152,6 +237,7 @@ export const threadsRouter = router({
         ...card,
         showSlug: detail.show.slug,
         showName: detail.show.name,
+        sources: [...sourceByKey.values()],
         episodes: detail.episodes.map((te) => ({
           slug: te.episode.slug,
           title: te.episode.title,
@@ -167,18 +253,7 @@ export const threadsRouter = router({
 
       return {
         thread,
-        messages: messages.map((m) => ({
-          id: m.id,
-          parentId: m.parentId,
-          depth: m.depth,
-          subject: m.subject,
-          postedAt: iso(m.postedAt),
-          dateOnly: m.dateOnly,
-          body: m.body,
-          lineCount: m.lineCount,
-          isSpam: m.isSpam,
-          poster: { id: m.poster.id, displayName: m.poster.displayName },
-        })),
+        messages: projected,
         truncated: base.messageCount > 1000,
       }
     }),

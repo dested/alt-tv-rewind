@@ -35,7 +35,7 @@ export function Layout() {
   return (
     <>
       <header className="border-brand border-t-4">
-        <nav className="mx-auto flex max-w-5xl items-center gap-5 px-6 py-3">
+        <nav className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-5 gap-y-1 px-6 py-3">
           <Link to="/" className="font-serif text-2xl font-semibold tracking-tight">
             alt.tv.rewind
           </Link>
@@ -49,6 +49,9 @@ export function Layout() {
               </NavLink>
               <NavLink to={`/${show}/people`} className={navLink}>
                 People
+              </NavLink>
+              <NavLink to={`/${show}/sources`} className={navLink}>
+                Sources
               </NavLink>
             </>
           )}
@@ -88,8 +91,12 @@ export function Layout() {
       </main>
       <footer className="border-t">
         <div className="text-muted-foreground mx-auto max-w-5xl px-6 py-6 text-xs leading-relaxed">
-          Newsgroup archives from the Internet Archive's usenet-alt collection · episode data from
-          TVMaze · posters are shown by display name only, never by address.
+          Newsgroup{' '}
+          <Link to="/sources" className="text-link hover:underline">
+            archives
+          </Link>{' '}
+          from the Internet Archive's usenet-alt collection · episode data from TVMaze · posters are
+          shown by display name only, never by address.
         </div>
       </footer>
       <ScrollRestoration />

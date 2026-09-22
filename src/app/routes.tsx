@@ -14,7 +14,11 @@ import { PosterPage } from './poster'
 import { SearchPage } from './search'
 import { SeasonPage } from './season'
 import { ShowPage } from './show'
+import { ShowSourcesPage } from './show-sources'
 import { SignInPage } from './sign-in'
+import { SourcePage } from './source'
+import { SourceRecordPage } from './source-record'
+import { SourcesPage } from './sources'
 import { ThreadPage } from './thread'
 
 // Per-request context populated by entry-server.tsx and handed to loaders via
@@ -133,18 +137,48 @@ async function seasonLoader({ context, params }: LoaderFunctionArgs) {
   return null
 }
 
-async function episodeLoader({ context, params }: LoaderFunctionArgs) {
+async function episodeLoader({ context, params, request }: LoaderFunctionArgs) {
   const { queryClient, trpc } = clients(context)
   const slug = param(params, 'show')
   const episode = param(params, 'episode')
+  const source = new URL(request.url).searchParams.get('source') ?? undefined
   const data = await ensure(
     queryClient.ensureQueryData(trpc.episodes.get.queryOptions({ slug, episode }))
   )
-  const base = { episodeId: data.episode.id, filter: 'all', sort: 'size', cursor: 0, limit: 20 } as const
+  const base = { episodeId: data.episode.id, filter: 'all', sort: 'size', source, cursor: 0, limit: 20 } as const
   await Promise.all([
     queryClient.ensureQueryData(trpc.threads.byEpisode.queryOptions({ ...base, relation: 'live' })),
     queryClient.ensureQueryData(trpc.threads.byEpisode.queryOptions({ ...base, relation: 'retro' })),
   ])
+  return null
+}
+
+async function sourcesLoader({ context }: LoaderFunctionArgs) {
+  const { queryClient, trpc } = clients(context)
+  await ensure(queryClient.ensureQueryData(trpc.sources.list.queryOptions()))
+  return null
+}
+
+async function sourceLoader({ context, params }: LoaderFunctionArgs) {
+  const { queryClient, trpc } = clients(context)
+  const key = param(params, 'key')
+  await ensure(queryClient.ensureQueryData(trpc.sources.get.queryOptions({ key })))
+  return null
+}
+
+async function sourceRecordLoader({ context, params }: LoaderFunctionArgs) {
+  const { queryClient, trpc } = clients(context)
+  const key = param(params, 'key')
+  const recordId = param(params, 'recordId')
+  await ensure(queryClient.ensureQueryData(trpc.sources.record.queryOptions({ key, recordId })))
+  return null
+}
+
+async function showSourcesLoader({ context, params }: LoaderFunctionArgs) {
+  const { queryClient, trpc } = clients(context)
+  const slug = param(params, 'show')
+  await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
+  await ensure(queryClient.ensureQueryData(trpc.sources.forShow.queryOptions({ slug })))
   return null
 }
 
@@ -209,6 +243,20 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, Component: HomePage, loader: homeLoader },
       { path: 'sign-in', Component: SignInPage, loader: redirectIfSignedIn },
+      // The global source catalog. Registered before `:show` so its static first
+      // segment ranks above the dynamic show slug.
+      {
+        path: 'sources',
+        children: [
+          { index: true, Component: SourcesPage, loader: sourcesLoader },
+          { path: ':key', Component: SourcePage, loader: sourceLoader },
+          {
+            path: ':key/records/:recordId',
+            Component: SourceRecordPage,
+            loader: sourceRecordLoader,
+          },
+        ],
+      },
       {
         path: ':show',
         children: [
@@ -218,6 +266,7 @@ export const routes: RouteObject[] = [
           { path: 'people', Component: PeoplePage, loader: peopleLoader },
           { path: 'people/:id', Component: PosterPage, loader: posterLoader },
           { path: 'thread/:slug', Component: ThreadPage, loader: threadLoader },
+          { path: 'sources', Component: ShowSourcesPage, loader: showSourcesLoader },
           // Static siblings above rank higher than this dynamic segment.
           { path: ':episode', Component: EpisodePage, loader: episodeLoader },
         ],

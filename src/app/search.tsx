@@ -124,7 +124,7 @@ export function SearchPage() {
                 meta.push(
                   <Link
                     to={`/${show}/${thread.episode.slug}`}
-                    className="text-link inline-flex items-center rounded-md border px-2 py-0.5 text-xs">
+                    className="text-link hover:bg-link-soft inline-flex items-center rounded-md border px-2 py-0.5 text-xs">
                     {episodeCode(thread.episode.seasonNumber, thread.episode.number)}{' '}
                     {thread.episode.title}
                   </Link>
@@ -136,7 +136,7 @@ export function SearchPage() {
                   <div>
                     <Link
                       to={`/${show}/thread/${thread.slug}`}
-                      className="hover:text-link block font-serif text-xl leading-snug font-medium">
+                      className="hover:text-link block font-serif text-xl leading-snug font-medium [overflow-wrap:anywhere]">
                       {thread.subject}
                     </Link>
                   </div>
@@ -151,10 +151,10 @@ export function SearchPage() {
                   {hits.map((hit) => (
                     <div key={hit.messageId} className="space-y-0.5">
                       <span className="text-muted-foreground text-xs">
-                        {hit.posterName} · {formatDate(hit.postedAt)}
+                        {hit.posterName} · {formatDate(hit.postedAt)} · {hit.sourceName}
                       </span>
                       <div
-                        className="post text-muted-foreground text-[1rem]"
+                        className="post text-muted-foreground text-[1rem] break-words"
                         dangerouslySetInnerHTML={{
                           __html: snippetToHtml(redactEmails(hit.snippet)),
                         }}

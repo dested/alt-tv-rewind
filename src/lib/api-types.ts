@@ -9,3 +9,4 @@ export type RouterInputs = inferRouterInputs<AppRouter>
 
 export type ThreadCard = RouterOutputs['threads']['byEpisode']['items'][number]
 export type EpisodeCard = RouterOutputs['episodes']['list'][number]
+export type SourceLocationData = RouterOutputs['threads']['get']['messages'][number]['location']

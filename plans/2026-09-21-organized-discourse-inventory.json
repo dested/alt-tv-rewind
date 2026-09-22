@@ -1,0 +1,312 @@
+{
+  "schemaVersion": 1,
+  "builtAt": "2026-09-22T00:29:14.880166+00:00",
+  "directory": "data/archives/research-2026-09-21/organized",
+  "scope": "Research files only; no application database imports",
+  "sourceCount": 7,
+  "recordCount": 388353,
+  "observationCount": 391362,
+  "canonicalContentCount": 387529,
+  "candidateShowAssociations": 10466,
+  "contextShowAssociations": 1605,
+  "verifiedRawArtifacts": 389,
+  "sources": [
+    {
+      "schemaVersion": 1,
+      "sourceId": "simpsons-archive-capsules",
+      "kind": "capsule",
+      "name": "The Simpsons Archive episode capsules",
+      "homeUrl": "https://simpsonsarchive.com/episodes.html",
+      "notes": [
+        "Compiled documents containing reviews, observations, summaries and quotations; not original threads.",
+        "Dates on documents are never used as individual post timestamps.",
+        "Retained for local research; embedded redistribution notices remain attached.",
+        "verifiedAt is an artifact verification time, not evidence of its first retrieval time."
+      ],
+      "records": 281,
+      "observations": 281,
+      "bodyVariantObservations": 0,
+      "kinds": {
+        "compiled_document": 281
+      },
+      "datePrecisionCounts": {
+        "unknown": 281
+      },
+      "years": {}
+    },
+    {
+      "schemaVersion": 1,
+      "sourceId": "southpark-official-forum",
+      "kind": "forum",
+      "name": "South Park Forums",
+      "homeUrl": "https://southpark.cc.com/forum/",
+      "notes": [
+        "Official South Park forum; archive provider is ArchiveTeam/Internet Archive, not the original community.",
+        "Four collected topics only; captures are from 2024 and posts include later replies.",
+        "Retrieval timestamps were not recorded for these WARC ranges and remain null.",
+        "Post text is the captured version; edit notices do not prove original wording.",
+        "Source post IDs deduplicate pagination overlap. Observations retain body variants.",
+        "Quoted text remains enclosed in [quote] markers. No reply parents are inferred."
+      ],
+      "records": 1324,
+      "observations": 1326,
+      "bodyVariantObservations": 0,
+      "kinds": {
+        "post": 1324
+      },
+      "datePrecisionCounts": {
+        "minute": 1324
+      },
+      "years": {
+        "2005": 505,
+        "2006": 815,
+        "2008": 2,
+        "2009": 1,
+        "2017": 1
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sourceId": "usenet-alt-tv-familyguy",
+      "kind": "usenet",
+      "name": "alt.tv.familyguy",
+      "homeUrl": "https://groups.google.com/g/alt.tv.familyguy",
+      "groupsRead": [
+        "alt.tv.familyguy"
+      ],
+      "recordCount": 852,
+      "observationCount": 852,
+      "notes": [
+        "First occurrence per source and exact Message-ID is the canonical readable record.",
+        "Every raw occurrence is retained as a byte-addressable observation, including body conflicts.",
+        "Original posting dates are never replaced with artifact capture or verification dates.",
+        "Unknown-zone clock values retain date and raw text; postedAt stays null.",
+        "Source association identifies the downloaded group; Newsgroups declares distribution.",
+        "Body text is complete MIME-decoded readable text, with HTML-only bodies reduced to text."
+      ],
+      "records": 852,
+      "observations": 852,
+      "bodyVariantObservations": 0,
+      "kinds": {
+        "post": 852
+      },
+      "datePrecisionCounts": {
+        "second": 535,
+        "unknown": 2,
+        "day": 315
+      },
+      "years": {
+        "1999": 257,
+        "2000": 61,
+        "2001": 70,
+        "2002": 47,
+        "2003": 51,
+        "2004": 37,
+        "2005": 165,
+        "2006": 24,
+        "2007": 48,
+        "2008": 54,
+        "2009": 20,
+        "2010": 6,
+        "2011": 4,
+        "2013": 6
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sourceId": "usenet-alt-tv-game-shows",
+      "kind": "usenet",
+      "name": "alt.tv.game-shows",
+      "homeUrl": "https://groups.google.com/g/alt.tv.game-shows",
+      "groupsRead": [
+        "alt.tv.game-shows"
+      ],
+      "recordCount": 77566,
+      "observationCount": 77660,
+      "notes": [
+        "First occurrence per source and exact Message-ID is the canonical readable record.",
+        "Every raw occurrence is retained as a byte-addressable observation, including body conflicts.",
+        "Original posting dates are never replaced with artifact capture or verification dates.",
+        "Unknown-zone clock values retain date and raw text; postedAt stays null.",
+        "Source association identifies the downloaded group; Newsgroups declares distribution.",
+        "Body text is complete MIME-decoded readable text, with HTML-only bodies reduced to text."
+      ],
+      "records": 77566,
+      "observations": 77660,
+      "bodyVariantObservations": 0,
+      "kinds": {
+        "post": 77566
+      },
+      "datePrecisionCounts": {
+        "second": 77093,
+        "unknown": 473
+      },
+      "years": {
+        "1994": 1,
+        "2001": 3000,
+        "2002": 52639,
+        "2003": 10259,
+        "2004": 5005,
+        "2005": 1229,
+        "2006": 959,
+        "2007": 707,
+        "2008": 763,
+        "2009": 685,
+        "2010": 397,
+        "2011": 222,
+        "2012": 478,
+        "2013": 749
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sourceId": "usenet-alt-tv-simpsons-itchy-scratchy",
+      "kind": "usenet",
+      "name": "alt.tv.simpsons.itchy-scratchy",
+      "homeUrl": "https://groups.google.com/g/alt.tv.simpsons.itchy-scratchy",
+      "groupsRead": [
+        "alt.tv.simpsons.itchy-scratchy"
+      ],
+      "recordCount": 5400,
+      "observationCount": 5409,
+      "notes": [
+        "First occurrence per source and exact Message-ID is the canonical readable record.",
+        "Every raw occurrence is retained as a byte-addressable observation, including body conflicts.",
+        "Original posting dates are never replaced with artifact capture or verification dates.",
+        "Unknown-zone clock values retain date and raw text; postedAt stays null.",
+        "Source association identifies the downloaded group; Newsgroups declares distribution.",
+        "Body text is complete MIME-decoded readable text, with HTML-only bodies reduced to text."
+      ],
+      "records": 5400,
+      "observations": 5409,
+      "bodyVariantObservations": 0,
+      "kinds": {
+        "post": 5400
+      },
+      "datePrecisionCounts": {
+        "second": 1474,
+        "unknown": 34,
+        "day": 3887,
+        "minute": 5
+      },
+      "years": {
+        "1992": 294,
+        "1993": 238,
+        "1994": 187,
+        "1995": 193,
+        "1996": 862,
+        "1997": 992,
+        "1998": 914,
+        "1999": 842,
+        "2000": 328,
+        "2001": 227,
+        "2002": 71,
+        "2003": 59,
+        "2004": 64,
+        "2005": 27,
+        "2006": 39,
+        "2007": 9,
+        "2008": 11,
+        "2009": 2,
+        "2011": 3,
+        "2012": 4
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sourceId": "usenet-rec-arts-animation",
+      "kind": "usenet",
+      "name": "rec.arts.animation",
+      "homeUrl": "https://groups.google.com/g/rec.arts.animation",
+      "groupsRead": [
+        "rec.arts.animation"
+      ],
+      "recordCount": 129714,
+      "observationCount": 132443,
+      "notes": [
+        "First occurrence per source and exact Message-ID is the canonical readable record.",
+        "Every raw occurrence is retained as a byte-addressable observation, including body conflicts.",
+        "Original posting dates are never replaced with artifact capture or verification dates.",
+        "Unknown-zone clock values retain date and raw text; postedAt stays null.",
+        "Source association identifies the downloaded group; Newsgroups declares distribution.",
+        "Body text is complete MIME-decoded readable text, with HTML-only bodies reduced to text."
+      ],
+      "records": 129714,
+      "observations": 132443,
+      "bodyVariantObservations": 0,
+      "kinds": {
+        "post": 129714
+      },
+      "datePrecisionCounts": {
+        "second": 62078,
+        "unknown": 1109,
+        "minute": 22,
+        "day": 66505
+      },
+      "years": {
+        "1994": 745,
+        "1995": 3973,
+        "1996": 11704,
+        "1997": 11682,
+        "1998": 13432,
+        "1999": 15919,
+        "2000": 14524,
+        "2001": 9543,
+        "2002": 13286,
+        "2003": 10179,
+        "2004": 6689,
+        "2005": 3603,
+        "2006": 3723,
+        "2007": 3207,
+        "2008": 1891,
+        "2009": 2217,
+        "2010": 1231,
+        "2011": 621,
+        "2012": 403,
+        "2013": 33
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "sourceId": "usenet-rec-arts-tv",
+      "kind": "usenet",
+      "name": "rec.arts.tv",
+      "homeUrl": "https://groups.google.com/g/rec.arts.tv",
+      "groupsRead": [
+        "rec.arts.tv"
+      ],
+      "recordCount": 173216,
+      "observationCount": 173391,
+      "notes": [
+        "First occurrence per source and exact Message-ID is the canonical readable record.",
+        "Every raw occurrence is retained as a byte-addressable observation, including body conflicts.",
+        "Original posting dates are never replaced with artifact capture or verification dates.",
+        "Unknown-zone clock values retain date and raw text; postedAt stays null.",
+        "Source association identifies the downloaded group; Newsgroups declares distribution.",
+        "Body text is complete MIME-decoded readable text, with HTML-only bodies reduced to text."
+      ],
+      "records": 173216,
+      "observations": 173391,
+      "bodyVariantObservations": 6,
+      "kinds": {
+        "post": 173216
+      },
+      "datePrecisionCounts": {
+        "second": 172166,
+        "unknown": 1050
+      },
+      "years": {
+        "2012": 137876,
+        "2013": 34290
+      }
+    }
+  ],
+  "limitations": [
+    "Show keyword associations retain the original audit's false positives and omissions.",
+    "Full Usenet sources include years outside 1989–2009; filter original posting evidence before using them.",
+    "A compiled document is not a timestamped fan post.",
+    "One record per source/native ID; canonical IDs link Usenet crossposts across sources.",
+    "First occurrence supplies canonical body; observations retain pointers to every raw copy and body variant.",
+    "Verification timestamps do not establish original retrieval or historical capture times."
+  ]
+}

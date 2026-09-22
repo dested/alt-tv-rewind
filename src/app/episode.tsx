@@ -40,6 +40,7 @@ export function EpisodePage() {
 
   const tabParam = params.get('tab')
   const tab: EpisodeFilter = isEpisodeFilter(tabParam) ? tabParam : 'all'
+  const sourceParam = params.get('source') ?? undefined
   const episodeId = episodeQuery.data?.episode.id
 
   const liveQuery = useQuery(
@@ -49,6 +50,7 @@ export function EpisodePage() {
         relation: 'live',
         filter: tab,
         sort: 'size',
+        source: sourceParam,
         cursor: 0,
         limit: 20,
       },
@@ -62,6 +64,7 @@ export function EpisodePage() {
         relation: 'retro',
         filter: 'all',
         sort: 'size',
+        source: sourceParam,
         cursor: 0,
         limit: 20,
       },
@@ -78,6 +81,12 @@ export function EpisodePage() {
   useEffect(() => {
     setLiveExtra([])
   }, [tab])
+
+  // A community change re-scopes both lists.
+  useEffect(() => {
+    setLiveExtra([])
+    setRetroExtra([])
+  }, [sourceParam])
 
   const data = episodeQuery.data
   if (!data) return <p className="text-muted-foreground text-sm">Loading…</p>
@@ -109,6 +118,7 @@ export function EpisodePage() {
           relation,
           filter,
           sort: 'size',
+          source: sourceParam,
           cursor,
           limit: 20,
         })
@@ -188,6 +198,29 @@ export function EpisodePage() {
 
       <StatLine items={stats} />
 
+      {data.documents.length > 0 && (
+        <div className="text-muted-foreground space-y-1 text-sm">
+          {data.documents.map((d) => (
+            <div key={d.recordId}>
+              {d.title} — episode capsule at {d.source.name} · {d.contributionCount} attributed contributions
+              {d.revision !== null && ` · revision ${d.revision}`}
+              {d.originalUrl && (
+                <>
+                  {' · '}
+                  <a
+                    className="text-link"
+                    href={d.originalUrl}
+                    target="_blank"
+                    rel="noreferrer">
+                    Original document
+                  </a>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {data.reactionByDay.some((p) => p.messages > 0) && (
         <div className="space-y-1">
           <ReactionCurve points={data.reactionByDay} airDate={ep.airDate} />
@@ -197,7 +230,23 @@ export function EpisodePage() {
 
       <section className="space-y-5">
         <SectionHeading>The morning after</SectionHeading>
-        <FilterTabs value={tab} counts={counts} onChange={changeTab} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <FilterTabs value={tab} counts={counts} onChange={changeTab} />
+          {data.sources.length > 1 && (
+            <select
+              value={sourceParam ?? ''}
+              onChange={(e) => changeSource(e.target.value)}
+              aria-label="Filter by community"
+              className="border-input bg-background h-9 rounded-md border px-2 text-sm">
+              <option value="">All communities</option>
+              {data.sources.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.name} ({s.threadCount})
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
         {liveItems.length === 0 ? (
           <p className="text-muted-foreground text-sm">{liveEmpty}</p>
         ) : (
@@ -297,6 +346,18 @@ export function EpisodePage() {
         const p = new URLSearchParams(prev)
         if (next === 'all') p.delete('tab')
         else p.set('tab', next)
+        return p
+      },
+      { replace: true, preventScrollReset: true }
+    )
+  }
+
+  function changeSource(next: string) {
+    setParams(
+      (prev) => {
+        const p = new URLSearchParams(prev)
+        if (next === '') p.delete('source')
+        else p.set('source', next)
         return p
       },
       { replace: true, preventScrollReset: true }

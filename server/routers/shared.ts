@@ -5,7 +5,15 @@
 
 import { z } from 'zod'
 import { Prisma } from '@prisma/client'
-import type { ThreadKind, Sentiment, PredictionOutcome, EpisodeRelation } from '@prisma/client'
+import type {
+  ThreadKind,
+  Sentiment,
+  PredictionOutcome,
+  EpisodeRelation,
+  SourceKind,
+  OriginalStatus,
+  DatePrecision,
+} from '@prisma/client'
 import { prisma } from '../prisma'
 
 // ───────────────────────── date helpers ─────────────────────────
@@ -77,6 +85,7 @@ export type ThreadCard = {
   } | null
   hoursAfterAir: number | null // null unless the opener's hour is real and the episode has an airStamp
   daysAfterAir: number | null // calendar days (network zone) between air date and the opener
+  source: SourceRef | null // the community this thread was archived from
 }
 
 // 'YYYY-MM-DD' of an instant in the network's zone (en-CA renders ISO order).
@@ -90,6 +99,124 @@ const etDate = new Intl.DateTimeFormat('en-CA', {
 export function daysBetweenAirAndPost(airDate: Date, postedAt: Date): number {
   const postedDay = Date.parse(`${etDate.format(postedAt)}T00:00:00Z`)
   return Math.round((postedDay - airDate.getTime()) / 86_400_000)
+}
+
+// ───────────────────────── source location ─────────────────────────
+
+// A community: newsgroup, forum, or capsule compilation. The reader-facing
+// reference (name + kind) that every post, thread and listing carries.
+export type SourceRef = { key: string; name: string; kind: SourceKind }
+
+// Everywhere a post can be found: our own preserved view, the live original, an
+// archived replay, the custodian's collection. Nulls mean "not available", so
+// the UI shows only the links that exist.
+export type SourceLocation = {
+  source: SourceRef
+  browseUrl: string | null // source.homeUrl → "Browse source"
+  originalUrl: string | null // exact permalink → "Original post" / "Original document"
+  originalStatus: OriginalStatus // is the original permalink reachable today
+  archivedUrl: string | null // exact replay → "Archived copy"
+  collectionUrl: string | null // custodian listing → "Archive collection"
+  preservedPath: string | null // "/sources/<key>/records/<recordId>" → "Preserved record"
+  captureCount: number
+  capturedAt: string | null // earliest capture, ISO
+}
+
+// Per-post timing against the thread's primary episode. Shown when it disagrees
+// with the thread's relation (a later reply inside a premiere thread, say), so
+// no post is mislabeled a live reaction. `unknown` = the header carried no date.
+export type PostTiming = 'before' | 'live' | 'later' | 'unknown'
+
+export const sourceRefSelect = {
+  key: true,
+  name: true,
+  kind: true,
+} satisfies Prisma.SourceSelect
+
+// The source fields needed to build a SourceLocation (superset of sourceRefSelect).
+export const sourceLocationSourceSelect = {
+  key: true,
+  name: true,
+  kind: true,
+  publication: true,
+  homeUrl: true,
+  collectionUrl: true,
+  originalStatus: true,
+} satisfies Prisma.SourceSelect
+
+type SourceLocationSource = Prisma.SourceGetPayload<{ select: typeof sourceLocationSourceSelect }>
+type LocationRecord = { recordId: string; externalId: string; originalUrl: string | null }
+type LocationObservation = { capturedAt: Date | null; capturedPageUrl: string | null }
+
+// Wayback path stamp (YYYYMMDDhhmmss, UTC) for a capture instant.
+export function waybackStamp(d: Date): string {
+  const s = d.toISOString()
+  return (
+    s.slice(0, 4) + s.slice(5, 7) + s.slice(8, 10) + s.slice(11, 13) + s.slice(14, 16) + s.slice(17, 19)
+  )
+}
+
+// Builds a post's SourceLocation. `record` is null for legacy posts (their
+// source is the archive's source, they have no per-post permalink); forum posts
+// pass their record and observations so an Archived copy (Wayback replay of the
+// earliest captured page) can be linked. captureCount counts every observation.
+export function sourceLocationFor(
+  source: SourceLocationSource,
+  record: LocationRecord | null,
+  observations: LocationObservation[]
+): SourceLocation {
+  let capturedAt: Date | null = null
+  for (const o of observations) {
+    if (o.capturedAt && (capturedAt === null || o.capturedAt.getTime() < capturedAt.getTime())) {
+      capturedAt = o.capturedAt
+    }
+  }
+
+  let archivedUrl: string | null = null
+  if (source.kind === 'forum' && record !== null) {
+    let best: { at: Date; page: string } | null = null
+    for (const o of observations) {
+      if (o.capturedAt && o.capturedPageUrl) {
+        if (best === null || o.capturedAt.getTime() < best.at.getTime()) {
+          best = { at: o.capturedAt, page: o.capturedPageUrl }
+        }
+      }
+    }
+    if (best) {
+      archivedUrl = `https://web.archive.org/web/${waybackStamp(best.at)}/${best.page}#p${record.externalId}`
+    }
+  }
+
+  return {
+    source: { key: source.key, name: source.name, kind: source.kind },
+    browseUrl: source.homeUrl,
+    originalUrl: record?.originalUrl ?? null,
+    originalStatus: source.originalStatus,
+    archivedUrl,
+    collectionUrl: source.collectionUrl,
+    preservedPath:
+      source.publication === 'public' && record !== null
+        ? `/sources/${source.key}/records/${record.recordId}`
+        : null,
+    captureCount: observations.length,
+    capturedAt: capturedAt === null ? null : capturedAt.toISOString(),
+  }
+}
+
+// Mirror of pipeline/lib/timing.ts postTiming, on ET calendar days (do not
+// import across the server/pipeline boundary — CLAUDE.md hard rule #2). `unknown`
+// precision means postedAt was inherited and is a sort key, not an observed time.
+export function postTimingFor(
+  airDate: Date,
+  postedAt: Date,
+  liveWindowDays: number,
+  datePrecision: DatePrecision | null
+): PostTiming {
+  if (datePrecision === 'unknown') return 'unknown'
+  const days = daysBetweenAirAndPost(airDate, postedAt)
+  if (days < -1) return 'before'
+  if (days <= liveWindowDays) return 'live'
+  return 'later'
 }
 
 // ───────────────────────── archive summary ─────────────────────────
@@ -177,6 +304,7 @@ export const threadCardSelect = {
   predictionClaim: true,
   predictionOutcome: true,
   rootMessageId: true,
+  archive: { select: { source: { select: sourceRefSelect } } },
   episodes: {
     where: { isPrimary: true },
     select: {
@@ -218,6 +346,7 @@ function toThreadCard(r: ThreadCardRow, starter: Starter): ThreadCard {
       ? null
       : Math.round(((r.startedAt.getTime() - airStamp.getTime()) / 3_600_000) * 10) / 10
   const daysAfterAir = primary ? daysBetweenAirAndPost(primary.episode.airDate, r.startedAt) : null
+  const src = r.archive.source
   return {
     id: r.id,
     slug: r.slug,
@@ -240,6 +369,7 @@ function toThreadCard(r: ThreadCardRow, starter: Starter): ThreadCard {
     episode,
     hoursAfterAir,
     daysAfterAir,
+    source: src ? { key: src.key, name: src.name, kind: src.kind } : null,
   }
 }
 

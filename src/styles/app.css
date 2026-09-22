@@ -100,6 +100,8 @@
   .post {
     @apply font-serif text-[1.125rem] leading-[1.6];
     font-optical-sizing: auto;
+    /* 1990s posts carry unbroken URLs and bang paths longer than a phone. */
+    overflow-wrap: anywhere;
   }
   .post-quote {
     @apply bg-secondary text-muted-foreground rounded-md px-4 py-3 text-[1rem];

@@ -1,0 +1,667 @@
+{
+  "generatedAt": "2026-09-22T01:40:31.220Z",
+  "sources": [
+    {
+      "key": "simpsons-archive-capsules",
+      "kind": "capsule",
+      "legacy": false,
+      "records": 281,
+      "observations": 281,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 281,
+      "dayOnly": 0,
+      "longBodies": 52,
+      "artifacts": 281
+    },
+    {
+      "key": "southpark-official-forum",
+      "kind": "forum",
+      "legacy": false,
+      "records": 1324,
+      "observations": 1326,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 0,
+      "dayOnly": 0,
+      "longBodies": 0,
+      "artifacts": 91
+    },
+    {
+      "key": "usenet-alt-tv-familyguy",
+      "kind": "usenet",
+      "legacy": false,
+      "records": 852,
+      "observations": 852,
+      "variants": 0,
+      "spam": 90,
+      "missingId": 2,
+      "undated": 2,
+      "dayOnly": 315,
+      "longBodies": 2,
+      "artifacts": 1
+    },
+    {
+      "key": "usenet-alt-tv-game-shows",
+      "kind": "usenet",
+      "legacy": false,
+      "records": 77566,
+      "observations": 77660,
+      "variants": 0,
+      "spam": 2213,
+      "missingId": 474,
+      "undated": 473,
+      "dayOnly": 0,
+      "longBodies": 12,
+      "artifacts": 1
+    },
+    {
+      "key": "usenet-alt-tv-simpsons-itchy-scratchy",
+      "kind": "usenet",
+      "legacy": false,
+      "records": 5400,
+      "observations": 5409,
+      "variants": 0,
+      "spam": 630,
+      "missingId": 35,
+      "undated": 34,
+      "dayOnly": 3887,
+      "longBodies": 2,
+      "artifacts": 1
+    },
+    {
+      "key": "usenet-rec-arts-animation",
+      "kind": "usenet",
+      "legacy": false,
+      "records": 129714,
+      "observations": 132443,
+      "variants": 0,
+      "spam": 3553,
+      "missingId": 1118,
+      "undated": 1109,
+      "dayOnly": 66505,
+      "longBodies": 101,
+      "artifacts": 1
+    },
+    {
+      "key": "usenet-rec-arts-tv",
+      "kind": "usenet",
+      "legacy": false,
+      "records": 173216,
+      "observations": 173391,
+      "variants": 6,
+      "spam": 5342,
+      "missingId": 1046,
+      "undated": 1050,
+      "dayOnly": 0,
+      "longBodies": 128,
+      "artifacts": 1
+    },
+    {
+      "key": "usenet-alt-tv-beavis-n-butthead",
+      "kind": "usenet",
+      "legacy": true,
+      "records": 0,
+      "observations": 0,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 0,
+      "dayOnly": 0,
+      "longBodies": 0,
+      "artifacts": 0
+    },
+    {
+      "key": "usenet-alt-tv-daria",
+      "kind": "usenet",
+      "legacy": true,
+      "records": 0,
+      "observations": 0,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 0,
+      "dayOnly": 0,
+      "longBodies": 0,
+      "artifacts": 0
+    },
+    {
+      "key": "usenet-alt-tv-family-guy",
+      "kind": "usenet",
+      "legacy": true,
+      "records": 0,
+      "observations": 0,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 0,
+      "dayOnly": 0,
+      "longBodies": 0,
+      "artifacts": 0
+    },
+    {
+      "key": "usenet-alt-tv-friends",
+      "kind": "usenet",
+      "legacy": true,
+      "records": 0,
+      "observations": 0,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 0,
+      "dayOnly": 0,
+      "longBodies": 0,
+      "artifacts": 0
+    },
+    {
+      "key": "usenet-alt-tv-futurama",
+      "kind": "usenet",
+      "legacy": true,
+      "records": 0,
+      "observations": 0,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 0,
+      "dayOnly": 0,
+      "longBodies": 0,
+      "artifacts": 0
+    },
+    {
+      "key": "usenet-alt-tv-king-of-hill",
+      "kind": "usenet",
+      "legacy": true,
+      "records": 0,
+      "observations": 0,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 0,
+      "dayOnly": 0,
+      "longBodies": 0,
+      "artifacts": 0
+    },
+    {
+      "key": "usenet-alt-tv-seinfeld",
+      "kind": "usenet",
+      "legacy": true,
+      "records": 0,
+      "observations": 0,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 0,
+      "dayOnly": 0,
+      "longBodies": 0,
+      "artifacts": 0
+    },
+    {
+      "key": "usenet-alt-tv-simpsons",
+      "kind": "usenet",
+      "legacy": true,
+      "records": 0,
+      "observations": 0,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 0,
+      "dayOnly": 0,
+      "longBodies": 0,
+      "artifacts": 0
+    },
+    {
+      "key": "usenet-alt-tv-southpark",
+      "kind": "usenet",
+      "legacy": true,
+      "records": 0,
+      "observations": 0,
+      "variants": 0,
+      "spam": 0,
+      "missingId": 0,
+      "undated": 0,
+      "dayOnly": 0,
+      "longBodies": 0,
+      "artifacts": 0
+    }
+  ],
+  "shows": [
+    {
+      "slug": "family-guy",
+      "dispositions": {
+        "accepted": 2594,
+        "context": 3069,
+        "excluded": 12089,
+        "needs_review": 396
+      },
+      "byMethod": {
+        "crosspost": 1038,
+        "community": 762,
+        "seed-only": 7,
+        "subject-episode": 3,
+        "body-term": 155,
+        "screen": 12472,
+        "conversation-context": 3069,
+        "subject-term": 642
+      },
+      "byReason": {
+        "spam": 11828,
+        "undated": 14,
+        "incidental_mention": 382,
+        "quoted_mention": 254,
+        "no_mention": 7
+      },
+      "inEra": {
+        "accepted": 2253,
+        "context": 1267
+      },
+      "later": {
+        "accepted": 341,
+        "context": 1802
+      },
+      "imported": {
+        "messages": 4388,
+        "linked": 1275,
+        "pending": 0
+      },
+      "archives": [
+        {
+          "source": "usenet-alt-tv-family-guy",
+          "newsgroup": "alt.tv.family-guy",
+          "messageCount": 21499,
+          "threadCount": 4311,
+          "firstPostAt": "1999-05-09T16:52:20Z",
+          "lastPostAt": "2013-05-21T18:28:58Z"
+        },
+        {
+          "source": "usenet-alt-tv-familyguy",
+          "newsgroup": "alt.tv.familyguy",
+          "messageCount": 522,
+          "threadCount": 197,
+          "firstPostAt": "1999-04-19T12:00:00Z",
+          "lastPostAt": "2011-07-02T01:45:55Z"
+        },
+        {
+          "source": "usenet-alt-tv-game-shows",
+          "newsgroup": "alt.tv.game-shows",
+          "messageCount": 193,
+          "threadCount": 5,
+          "firstPostAt": "2002-02-01T08:31:34Z",
+          "lastPostAt": "2008-03-10T00:57:40Z"
+        },
+        {
+          "source": "usenet-alt-tv-simpsons-itchy-scratchy",
+          "newsgroup": "alt.tv.simpsons.itchy-scratchy",
+          "messageCount": 1,
+          "threadCount": 1,
+          "firstPostAt": "2001-08-30T18:40:08Z",
+          "lastPostAt": "2001-08-30T18:40:08Z"
+        },
+        {
+          "source": "usenet-rec-arts-animation",
+          "newsgroup": "rec.arts.animation",
+          "messageCount": 1750,
+          "threadCount": 99,
+          "firstPostAt": "1999-01-26T12:00:00Z",
+          "lastPostAt": "2010-11-01T19:50:56Z"
+        },
+        {
+          "source": "usenet-rec-arts-tv",
+          "newsgroup": "rec.arts.tv",
+          "messageCount": 1921,
+          "threadCount": 92,
+          "firstPostAt": "2012-03-12T19:08:50Z",
+          "lastPostAt": "2013-06-19T22:16:03Z"
+        }
+      ],
+      "importedThreads": {
+        "total": 394,
+        "byMethod": {
+          "heuristic": 58
+        },
+        "live": 53,
+        "retro": 5,
+        "unattributed": 336
+      },
+      "capsules": {
+        "documents": 0,
+        "mapped": 0,
+        "unresolved": 0,
+        "contributions": {}
+      }
+    },
+    {
+      "slug": "seinfeld",
+      "dispositions": {
+        "accepted": 195,
+        "context": 3139,
+        "excluded": 11987,
+        "needs_review": 232
+      },
+      "byMethod": {
+        "subject-term": 34,
+        "crosspost": 95,
+        "body-term": 66,
+        "screen": 12219,
+        "conversation-context": 3139
+      },
+      "byReason": {
+        "spam": 11828,
+        "undated": 2,
+        "incidental_mention": 230,
+        "quoted_mention": 159
+      },
+      "inEra": {
+        "accepted": 61,
+        "context": 760
+      },
+      "later": {
+        "accepted": 134,
+        "context": 2379
+      },
+      "imported": {
+        "messages": 3246,
+        "linked": 88,
+        "pending": 0
+      },
+      "archives": [
+        {
+          "source": "usenet-alt-tv-familyguy",
+          "newsgroup": "alt.tv.familyguy",
+          "messageCount": 14,
+          "threadCount": 2,
+          "firstPostAt": "1999-05-03T12:00:00Z",
+          "lastPostAt": "2004-01-10T19:01:12Z"
+        },
+        {
+          "source": "usenet-alt-tv-game-shows",
+          "newsgroup": "alt.tv.game-shows",
+          "messageCount": 240,
+          "threadCount": 17,
+          "firstPostAt": "2002-01-16T15:38:09Z",
+          "lastPostAt": "2008-03-10T00:57:40Z"
+        },
+        {
+          "source": "usenet-alt-tv-seinfeld",
+          "newsgroup": "alt.tv.seinfeld",
+          "messageCount": 157386,
+          "threadCount": 33550,
+          "firstPostAt": "1992-06-25T16:36:43Z",
+          "lastPostAt": "2013-06-12T19:03:39Z"
+        },
+        {
+          "source": "usenet-alt-tv-simpsons-itchy-scratchy",
+          "newsgroup": "alt.tv.simpsons.itchy-scratchy",
+          "messageCount": 20,
+          "threadCount": 3,
+          "firstPostAt": "1996-06-26T12:00:00Z",
+          "lastPostAt": "1996-12-02T12:00:00Z"
+        },
+        {
+          "source": "usenet-rec-arts-animation",
+          "newsgroup": "rec.arts.animation",
+          "messageCount": 528,
+          "threadCount": 14,
+          "firstPostAt": "1997-01-12T12:00:00Z",
+          "lastPostAt": "2009-03-06T00:52:19Z"
+        },
+        {
+          "source": "usenet-rec-arts-tv",
+          "newsgroup": "rec.arts.tv",
+          "messageCount": 2443,
+          "threadCount": 31,
+          "firstPostAt": "2012-03-16T07:32:08Z",
+          "lastPostAt": "2013-05-31T19:32:26Z"
+        }
+      ],
+      "importedThreads": {
+        "total": 67,
+        "byMethod": {
+          "heuristic": 14
+        },
+        "live": 0,
+        "retro": 14,
+        "unattributed": 53
+      },
+      "capsules": {
+        "documents": 0,
+        "mapped": 0,
+        "unresolved": 0,
+        "contributions": {}
+      }
+    },
+    {
+      "slug": "simpsons",
+      "dispositions": {
+        "accepted": 9059,
+        "context": 20771,
+        "excluded": 12790,
+        "needs_review": 377
+      },
+      "byMethod": {
+        "subject-episode": 9,
+        "subject-term": 471,
+        "community": 4770,
+        "body-term": 1629,
+        "conversation-context": 20771,
+        "capsule-airdate": 188,
+        "screen": 12374,
+        "capsule-title": 93,
+        "crosspost": 1973,
+        "seed-only": 719
+      },
+      "byReason": {
+        "unresolved_episode": 3,
+        "quoted_mention": 243,
+        "incidental_mention": 297,
+        "undated": 77,
+        "spam": 11828,
+        "no_mention": 719
+      },
+      "inEra": {
+        "accepted": 8654,
+        "context": 15737
+      },
+      "later": {
+        "accepted": 405,
+        "context": 5034
+      },
+      "imported": {
+        "messages": 27926,
+        "linked": 1626,
+        "pending": 278
+      },
+      "archives": [
+        {
+          "source": "usenet-alt-tv-familyguy",
+          "newsgroup": "alt.tv.familyguy",
+          "messageCount": 235,
+          "threadCount": 16,
+          "firstPostAt": "1999-04-19T12:00:00Z",
+          "lastPostAt": "2008-10-22T20:56:26Z"
+        },
+        {
+          "source": "usenet-alt-tv-game-shows",
+          "newsgroup": "alt.tv.game-shows",
+          "messageCount": 1287,
+          "threadCount": 94,
+          "firstPostAt": "2001-07-22T23:07:09Z",
+          "lastPostAt": "2013-06-05T14:41:39Z"
+        },
+        {
+          "source": "usenet-alt-tv-simpsons",
+          "newsgroup": "alt.tv.simpsons",
+          "messageCount": 135040,
+          "threadCount": 20361,
+          "firstPostAt": "2000-03-29T01:59:50Z",
+          "lastPostAt": "2013-06-02T02:54:20Z"
+        },
+        {
+          "source": "usenet-alt-tv-simpsons-itchy-scratchy",
+          "newsgroup": "alt.tv.simpsons.itchy-scratchy",
+          "messageCount": 4616,
+          "threadCount": 2409,
+          "firstPostAt": "1992-01-30T23:17:27Z",
+          "lastPostAt": "2011-04-13T23:55:42Z"
+        },
+        {
+          "source": "usenet-rec-arts-animation",
+          "newsgroup": "rec.arts.animation",
+          "messageCount": 16738,
+          "threadCount": 870,
+          "firstPostAt": "1994-03-03T22:52:16Z",
+          "lastPostAt": "2012-04-09T08:17:52Z"
+        },
+        {
+          "source": "usenet-rec-arts-tv",
+          "newsgroup": "rec.arts.tv",
+          "messageCount": 5026,
+          "threadCount": 188,
+          "firstPostAt": "2012-03-05T10:58:19Z",
+          "lastPostAt": "2013-06-19T17:24:24Z"
+        }
+      ],
+      "importedThreads": {
+        "total": 3577,
+        "byMethod": {
+          "heuristic": 406
+        },
+        "live": 381,
+        "retro": 25,
+        "unattributed": 3171
+      },
+      "capsules": {
+        "documents": 281,
+        "mapped": 278,
+        "unresolved": 3,
+        "contributions": {
+          "review": 4256,
+          "observation": 7517,
+          "editorial": 16462,
+          "grade": 115,
+          "quote": 2282,
+          "summary": 10660
+        }
+      }
+    },
+    {
+      "slug": "south-park",
+      "dispositions": {
+        "accepted": 2640,
+        "context": 5202,
+        "excluded": 12266,
+        "needs_review": 648
+      },
+      "byMethod": {
+        "official-topic": 1324,
+        "body-term": 149,
+        "subject-episode": 2,
+        "crosspost": 723,
+        "subject-term": 450,
+        "conversation-context": 5202,
+        "seed-only": 3,
+        "screen": 12903
+      },
+      "byReason": {
+        "incidental_mention": 633,
+        "spam": 11828,
+        "undated": 15,
+        "quoted_mention": 435,
+        "no_mention": 3
+      },
+      "inEra": {
+        "accepted": 2507,
+        "context": 3895
+      },
+      "later": {
+        "accepted": 133,
+        "context": 1307
+      },
+      "imported": {
+        "messages": 7328,
+        "linked": 514,
+        "pending": 0
+      },
+      "archives": [
+        {
+          "source": "usenet-alt-tv-familyguy",
+          "newsgroup": "alt.tv.familyguy",
+          "messageCount": 13,
+          "threadCount": 2,
+          "firstPostAt": "2005-09-08T03:18:50Z",
+          "lastPostAt": "2008-08-22T09:46:14Z"
+        },
+        {
+          "source": "usenet-alt-tv-game-shows",
+          "newsgroup": "alt.tv.game-shows",
+          "messageCount": 75,
+          "threadCount": 3,
+          "firstPostAt": "2003-11-06T14:32:44Z",
+          "lastPostAt": "2010-01-14T05:31:13Z"
+        },
+        {
+          "source": "usenet-alt-tv-simpsons-itchy-scratchy",
+          "newsgroup": "alt.tv.simpsons.itchy-scratchy",
+          "messageCount": 17,
+          "threadCount": 10,
+          "firstPostAt": "1997-11-11T12:00:00Z",
+          "lastPostAt": "1999-12-23T12:00:00Z"
+        },
+        {
+          "source": "usenet-alt-tv-southpark",
+          "newsgroup": "alt.tv.southpark",
+          "messageCount": 117017,
+          "threadCount": 20974,
+          "firstPostAt": "1997-07-25T12:00:00Z",
+          "lastPostAt": "2013-06-05T22:13:17Z"
+        },
+        {
+          "source": "usenet-rec-arts-animation",
+          "newsgroup": "rec.arts.animation",
+          "messageCount": 4553,
+          "threadCount": 194,
+          "firstPostAt": "1997-08-04T12:00:00Z",
+          "lastPostAt": "2012-02-18T07:52:09Z"
+        },
+        {
+          "source": "usenet-rec-arts-tv",
+          "newsgroup": "rec.arts.tv",
+          "messageCount": 1346,
+          "threadCount": 22,
+          "firstPostAt": "2012-03-13T20:03:35Z",
+          "lastPostAt": "2013-01-29T20:45:47Z"
+        },
+        {
+          "source": "southpark-official-forum",
+          "newsgroup": "southpark.cc.com/forum",
+          "messageCount": 1324,
+          "threadCount": 4,
+          "firstPostAt": "2005-11-28T19:45:00Z",
+          "lastPostAt": "2017-04-15T10:36:00Z"
+        }
+      ],
+      "importedThreads": {
+        "total": 235,
+        "byMethod": {
+          "heuristic": 27,
+          "official-topic": 4
+        },
+        "live": 28,
+        "retro": 3,
+        "unattributed": 204
+      },
+      "capsules": {
+        "documents": 0,
+        "mapped": 0,
+        "unresolved": 0,
+        "contributions": {}
+      }
+    }
+  ],
+  "legacy": {
+    "messages": 665499,
+    "threads": 112913,
+    "expected": 665499
+  }
+}

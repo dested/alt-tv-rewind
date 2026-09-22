@@ -2,6 +2,30 @@
 
 > Terse, newest-first log: what was asked → what was done. One entry per finished task.
 
+## 2026-09-21 — Source integration: catalog, additive schema, resumable import, source-location UI
+
+Ask: execute plans/2026-09-21-fable-source-integration-handoff.md end to end (fable-opus mode): catalog the research corpus, integrate it with provenance, show where every post came from.
+Done: migration `20260921200000_sources` (source/artifact/source_record/observation/record_show/contribution/message_source; archive→source, per-show newsgroup uniqueness; thread.import_key; message.source_record_id/date_precision; 9 legacy sources backfilled). `pipeline sources catalog|import|report`: 7 sources / 388,353 records / 391,755 observations inventoried with raw provenance; deterministic screen → 95,849 (record, show) dispositions; per-source JWZ + cross-source union → 68,425 conversations; 281 capsules mapped (278) with 41,292 extracted contributions kept metadata-only; forum 1,324 posts / 4 topics with minute-precision UTC separate from 2024 captures. Imported (local DB): family-guy 4,387 + 1,270 linked, south-park 1,324 forum + 6,004 Usenet, simpsons 27,902, seinfeld 3,245; legacy 665,499 untouched; re-runs idempotent. UI: per-post SourceLine (compact gutter / full links), timing tags, source names on rows and hits, episode community filter, `/sources`, `/sources/:key`, `/sources/:key/records/:recordId`, `/:show/sources`. Fixed the loader's UTC-ms live/retro rule to ET days; found and fixed a timestamptz cast that shifted instants by the session zone. Jev unavailable (402) → heuristic attribution only. Verified: typecheck, 179 tests, build, curl + bx flows, Playwright viewport pass (masthead now wraps on mobile). Not deployed.
+Touched: prisma/schema.prisma + migration, pipeline/sources/*, pipeline/lib/{db,timing}.ts, pipeline/stages/load.ts, pipeline/cli.ts, server/routers/{shared,threads,episodes,search,sources}.ts, server/router.ts, src/app/{routes,layout,thread,episode,search,sources,source,source-record,show-sources}.tsx, src/components/{source-line,thread-row}.tsx, src/lib/api-types.ts, cliffnotes.md, ui.md, decisions.md, plans/2026-09-21-source-integration-implementation.md, plans/2026-09-21-source-catalog-report.json.
+
+## 2026-09-21 — Fable handoff for complete cataloging and source-aware app integration
+
+Ask: provide one document Fable can use to finish cataloging, import the new data and show original source locations in the app.
+Done: self-contained execution brief with current inventories/paths, mandatory relevance and episode cataloging, capsule contribution extraction, identity/migration/import constraints, source-location UI behavior and concrete acceptance checks. Explicitly distinguishes completed collection from pending implementation and local-only files from git-clone contents.
+Touched: plans/2026-09-21-fable-source-integration-handoff.md, cliffnotes.md, updates.md. No application/database changes.
+
+## 2026-09-21 — Original-era discourse research, collection and source-aware files
+
+Ask: deeply research and collect 1990s–2000s Family Guy, Simpsons, South Park and Seinfeld discourse; use agents by source; organize collected files with provenance before changing the DB.
+Done: verified source catalog, five full additional Usenet mboxes (389,755 raw records), 281 Simpsons capsules, 91 recovered South Park forum pages (1,324 unique posts); 9,426 distinct Usenet candidates / 10,466 show memberships. Three offline source adapters retain source/native IDs, dates, raw-file observations and hashes; coordinator validates/indexes the bundle. Found February 1, 1999 Family Guy pilot reactions and gaps in main-group coverage. No app/DB/deployment changes. Details: `plans/2026-09-21-original-discourse-research.md`, `plans/2026-09-21-source-aware-collection.md`.
+Touched: plans/2026-09-21-* research/scripts/inventories; local gitignored data/archives/research-2026-09-21/; cliffnotes.md, decisions.md, updates.md.
+
+## 2026-09-21 — Deploy to drydock at tv-rewind.dested.com; full DB pushed up
+
+Ask: "deploy it, tv-rewind.dested.com. drydock supports all this. create a new db and push local up there".
+Done: created drydock project `tv-rewind` (ssr/bun/prisma/database, domain tv-rewind.dested.com, size `m`, health `/healthz`, pre-deploy overridden from the detected `prisma db push` to `bun run db:deploy` per hard rule #6). Drydock provisioned ECR/log group/Postgres db `tv_rewind`/`BETTER_AUTH_*`, committed managed files to origin/main (GitHub API), pointed the A record at the EIP. Pushed the whole local DB (2.18 GB; `pg_dump -Fc --no-owner` → `pg_restore -j4` over the box's 5432): 665,499 messages, 112,913 threads, 84,490 posters, 9 shows, all with the `message_search_trg` trigger + `message_search_idx` GIN index and populated tsvector; `_prisma_migrations` intact (7 applied → pre-deploy is a no-op). Verified live over prod TLS: `/healthz`, home, episode, `/:show/search` (festivus hits), people all 200; rollout COMPLETED, CI green.
+Touched: no app code — infra only (drydock project + managed files on origin/main); cliffnotes.md, decisions.md.
+
 ## 2026-09-21 — Thread page: Transcript / Reply chains toggle; colon and pipe quoting
 
 Ask: "wait i still like seeing the reply chains — support both views".

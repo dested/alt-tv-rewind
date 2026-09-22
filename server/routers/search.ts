@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { Prisma } from '@prisma/client'
 import { router, publicProcedure } from '../trpc'
 import { prisma } from '../prisma'
-import { iso } from './shared'
+import { iso, sourceRefSelect } from './shared'
 
 // ts_headline marks hits with the control chars U+0001 / U+0002 so the client
 // can HTML-escape the fragment first, then swap the markers for <mark>. The
@@ -22,11 +22,20 @@ const searchRowSchema = z.object({
   threadId: z.number().int(),
   postedAt: z.date(),
   posterName: z.string(),
+  sourceName: z.string(),
+  sourceKey: z.string().nullable(),
   snippet: z.string(),
   rank: z.number(),
 })
 
-type Hit = { messageId: number; posterName: string; postedAt: string; snippet: string }
+type Hit = {
+  messageId: number
+  posterName: string
+  postedAt: string
+  sourceName: string
+  sourceKey: string | null
+  snippet: string
+}
 
 export const searchRouter = router({
   query: publicProcedure
@@ -39,6 +48,7 @@ export const searchRouter = router({
         yearFrom: z.number().int().optional(),
         yearTo: z.number().int().optional(),
         posterId: z.number().int().optional(),
+        source: z.string().optional(),
         cursor: z.number().int().min(0).default(0),
       })
     )
@@ -77,14 +87,20 @@ export const searchRouter = router({
       if (input.posterId !== undefined) {
         conds.push(Prisma.sql`m.poster_id = ${input.posterId}`)
       }
+      if (input.source !== undefined) {
+        conds.push(Prisma.sql`a.source_id = (SELECT id FROM source WHERE key = ${input.source})`)
+      }
 
       const raw = await prisma.$queryRaw`
         SELECT m.id, m.thread_id AS "threadId", m.posted_at AS "postedAt", p.display_name AS "posterName",
+               COALESCE(s.name, a.newsgroup) AS "sourceName", s.key AS "sourceKey",
                ts_headline('english', regexp_replace(left(m.body, 6000), ${QUOTED_LINE_RE}, ' ', 'g'), q, ${HEADLINE_OPTIONS}) AS snippet,
                ts_rank_cd(m.search, q) AS rank
         FROM message m
         JOIN thread t ON t.id = m.thread_id
         JOIN poster p ON p.id = m.poster_id
+        JOIN archive a ON a.id = m.archive_id
+        LEFT JOIN source s ON s.id = a.source_id
         CROSS JOIN websearch_to_tsquery('english', ${input.q}) q
         WHERE ${Prisma.join(conds, ' AND ')}
         ORDER BY rank DESC, m.posted_at ASC
@@ -107,6 +123,8 @@ export const searchRouter = router({
             messageId: r.id,
             posterName: r.posterName,
             postedAt: iso(r.postedAt),
+            sourceName: r.sourceName,
+            sourceKey: r.sourceKey,
             snippet: r.snippet,
           })
         }
@@ -124,6 +142,7 @@ export const searchRouter = router({
               subject: true,
               startedAt: true,
               messageCount: true,
+              archive: { select: { source: { select: sourceRefSelect } } },
               episodes: {
                 where: { isPrimary: true },
                 select: {
@@ -141,6 +160,7 @@ export const searchRouter = router({
         const t = threadById.get(tid)
         if (!t) return []
         const primary = t.episodes[0] ?? null
+        const src = t.archive.source
         return [
           {
             thread: {
@@ -149,6 +169,7 @@ export const searchRouter = router({
               subject: t.subject,
               startedAt: iso(t.startedAt),
               messageCount: t.messageCount,
+              source: src ? { key: src.key, name: src.name, kind: src.kind } : null,
               episode: primary
                 ? {
                     slug: primary.episode.slug,

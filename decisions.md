@@ -2,6 +2,41 @@
 
 > Append-only log of choices with rejected alternatives. Never reverse one silently — add a superseding entry.
 
+## 2026-09-21 — Source catalog is a separate layer; the serving projection stays thread/message
+
+**Why:** the research corpus (five extra newsgroups, the official South Park forum, 281 Simpsons Archive capsules) is shared across shows and carries multiple captures per post, which the one-newsgroup loader cannot represent. `source` / `artifact` / `source_record` / `observation` / `record_show` / `contribution` hold every collected record with provenance and a reviewed per-show disposition (migration `20260921200000_sources`); `thread` / `message` remain the reader-facing projection, linked back through `message.source_record_id` + `message_source`. `archive` became one row per (show, community) — unique on `(show_id, newsgroup)` instead of a global newsgroup — so rec.arts.animation can feed Family Guy, The Simpsons and South Park without reassignment or purge. Nine legacy sources were backfilled so every existing post names its community.
+**Rejected:** one source label column on `message` (loses captures, crossposts and dispositions); re-running the legacy loader over the shared mboxes (its archive upsert would steal and delete the other show's threads; `t<n>` keys would mis-attach classifications); a second serving schema for imported posts (every page would need two code paths).
+
+## 2026-09-21 — Imported Usenet conversations join legacy threads by Message-ID; legacy slugs are never recomputed
+
+**Why:** the point of the extra groups is context around posts the site already has. Per-source JWZ (subject merge never crosses a community), then union by shared canonical ids and cross-source References; a conversation that contains a Message-ID already in the show's DB appends to that thread and links the existing message as an additional membership. New threads get `import_key = c:<16 hex>` and the standard content-hash slug; a joined legacy thread keeps its slug even when an earlier message arrives, so shared links survive.
+**Rejected:** recomputing slugs from the new earliest message (breaks every shared link); importing crossposts as separate messages (double-counts reactions); subject-based merging across communities (unrelated 2012 rec.arts.tv threads would fold into 1990s ones).
+
+## 2026-09-21 — Relevance is a deterministic screen with an explicit disposition per (record, show); Jev is unavailable
+
+**Why:** TypeSafe returned 402 (no credits) on probe, so nothing new could be classified. The screen is explainable: posts in a show's own group (`community`), posts distributed to the show's group (`crosspost`), show name or episode title in the subject, or ≥2 unquoted body mentions (or 1 + an episode term) are accepted; one unquoted mention is `needs_review`; quoted-only mentions and spam are excluded; every other member of an accepted conversation is `context`, imported for completeness but never counted as an independent match. Seeds from the research audit all receive a row (a seed with no decoded mention is `no_mention`). Episode attribution for new threads is the legacy heuristic plus one addition: a thread that started within ~1.7 days of exactly one air date is attributed to it at confidence 45.
+**Rejected:** auto-accepting the 10,466 research candidates (339 Seinfeld ones are mostly incidental); running 389k records through paid classification; leaving new threads unattributed until credits exist (the pilot-week Family Guy threads would be invisible).
+
+## 2026-09-21 — Capsules are metadata-only; forum originals are offline, so the Archived copy is the replay
+
+**Why:** every Simpsons Archive capsule carries "Not to be redistributed in a public forum without permission", so the source is `metadata_only`: 41,292 extracted contributions are cataloged locally (kind, attribution as printed, span) and the site shows only document metadata, counts and the original document link. The South Park forum permalinks return 404 (probed 2026-09-21); each post links a Wayback replay of its captured page at the WARC capture timestamp ("Archived copy"), the Archive Team item ("Archive collection") and our preserved-record view. Usenet posts have no permalink: "Browse source" (Google Groups) and "Archive collection" only.
+**Rejected:** publishing capsule review text (license); labeling a WARC download as a readable post; presenting the 2024 capture time as a post date (original minute-precision UTC times are kept separately).
+
+## 2026-09-21 — Per-post timing is computed at read time; a forum topic is live if any post is
+
+**Why:** official episode topics open with a blurb two days before air and run for months, so thread-start timing would label them retro and their later replies as premiere reactions. `threads.get` derives `before` / `live` / `later` / `unknown` per message against the primary episode on ET calendar days and the UI tags posts whose timing disagrees with the thread relation ("before it aired", "later reply", "date inherited"). The relation of a native forum topic is `live` when at least one post falls in the live window. Inherited (JWZ-resolved) dates are stored as `date_precision = unknown` so they are never shown as observed times.
+**Rejected:** per-post relation rows (episode counters are thread-based and the UI reads threads); splitting long topics into per-window threads (destroys native order).
+
+## 2026-09-21 — New research stays in source-aware files before app ingestion
+
+**Why:** owner requested a source on all collected content and explicitly chose organizing files before changing the database. Separate original community (`sourceId`), source-native content identity, captured artifact/observation, and many-to-many show associations. Usenet crossposts share canonical Message-ID identity while retaining each group occurrence; forum post IDs deduplicate pagination; capsules remain compiled documents with unknown contributor timestamps. Keep original posting, capture, retrieval and verification dates distinct. Raw and normalized bodies stay in gitignored `data/archives/research-2026-09-21/`; scripts and metadata inventories are tracked. See `plans/2026-09-21-source-aware-collection.md`.
+**Rejected:** one show-owned archive per new source (shared groups could be reassigned/purged by the current loader); one free-text source label with no artifact evidence; fabricated dates/threads for capsules; dropping duplicate captures before recording provenance. App schema and production data remain unchanged pending a separate integration.
+
+## 2026-09-21 — Prod hosting: drydock at tv-rewind.dested.com, data by pg_dump/restore
+
+**Why:** self-hosted drydock (one ARM EC2 box, shared Postgres 17, Caddy auto-TLS, GitHub Actions CI) already runs the fleet; onboarding is one `projects.create`. Project named `tv-rewind` (→ db `tv_rewind`, domain defaults to `tv-rewind.dested.com`). Pre-deploy is **`bun run db:deploy`**, never the auto-detected `prisma db push` — db push can't see the `message_search_update()` tsvector trigger and would drift (hard rule #6). The archive DB is static and offline-built, so instead of re-running the pipeline in prod we shipped the local DB up whole: `pg_dump -Fc` → `pg_restore` into the freshly-created empty db over the box's temporarily-open 5432. The dump's `_prisma_migrations` makes every future pre-deploy a no-op until a new migration lands.
+**Rejected:** re-running the ingest/classify/enrich pipeline against prod (costs money, needs the archives + LLM credits on the box); `prisma db push` as pre-deploy (drift, forbidden); a data-only dump (FK ordering + trigger-refire needs superuser we don't have on the shared server — a full dump orders triggers post-data and needs none).
+
 ## 2026-09-20 — Product: Usenet reaction archive aligned to episode air dates
 
 **Why:** the interesting unit isn't "a thread" but "what the newsgroup said the morning after an episode aired". Everything hangs off `Episode`; threads attach via `ThreadEpisode` tagged live (started within `Show.liveWindowDays` after air) or retro.

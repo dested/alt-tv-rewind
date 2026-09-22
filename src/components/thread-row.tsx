@@ -35,6 +35,7 @@ export function ThreadRow({ thread, showSlug }: { thread: ThreadCard; showSlug: 
     ),
   ]
   if (thread.messageCount !== 1) segments.push(plural(thread.posterCount, 'poster'))
+  if (thread.source) segments.push(thread.source.name)
 
   const badges: ReactNode[] = []
   if (thread.kind && thread.kind !== 'reaction') {
@@ -77,7 +78,7 @@ export function ThreadRow({ thread, showSlug }: { thread: ThreadCard; showSlug: 
       <div className="min-w-0 space-y-1.5">
         <Link
           to={`/${showSlug}/thread/${thread.slug}`}
-          className="hover:text-link block font-serif text-xl leading-snug font-medium">
+          className="hover:text-link block font-serif text-xl leading-snug font-medium [overflow-wrap:anywhere]">
           {thread.subject}
         </Link>
         <MetaLine segments={segments} />

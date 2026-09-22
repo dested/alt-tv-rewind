@@ -6,6 +6,7 @@ import { AdminFixEpisode } from '~/components/admin-fix-episode'
 import { Avatar } from '~/components/avatar'
 import { Badge } from '~/components/badge'
 import { MessageBody } from '~/components/message-body'
+import { SourceLine } from '~/components/source-line'
 import { buildTree, type Node } from '~/lib/thread-tree'
 import { KIND, PREDICTION_OUTCOME, SENTIMENT } from '~/lib/taxonomy'
 import { episodeCode, formatDateTime, formatNumber, plural, relativeToAir } from '~/lib/format'
@@ -15,6 +16,17 @@ import type { RootLoaderData } from './routes'
 
 // Deeper replies stop indenting but keep their reply order (see ui.md "Thread").
 const MAX_INDENT_DEPTH = 6
+
+type Timing = 'before' | 'live' | 'later' | 'unknown' | null
+
+// A short note next to a post's source when its own timing disagrees with the
+// thread's — so a later reply in a premiere thread is never read as a live take.
+function timingLabel(timing: Timing, primaryRelation: 'live' | 'retro' | null): string | null {
+  if (timing === 'before') return 'before it aired'
+  if (timing === 'unknown') return 'date inherited'
+  if (timing === 'later' && primaryRelation === 'live') return 'later reply'
+  return null
+}
 
 function descendantCount(node: Node): number {
   let count = 0
@@ -101,6 +113,9 @@ export function ThreadPage() {
   metaSegments.push(
     `${plural(thread.messageCount, 'post')} by ${plural(thread.posterCount, 'poster')}`
   )
+  const communities =
+    thread.sources.length > 1 ? `${thread.sources.length} communities` : (thread.source?.name ?? null)
+  if (communities) metaSegments.push(communities)
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -170,9 +185,20 @@ export function ThreadPage() {
       </div>
       <div className="mt-3">
         {view === 'tree' ? (
-          <TreeView roots={roots} collapsed={collapsed} toggle={toggle} showSlug={showSlug} />
+          <TreeView
+            roots={roots}
+            collapsed={collapsed}
+            toggle={toggle}
+            showSlug={showSlug}
+            primaryRelation={ep?.relation ?? null}
+          />
         ) : (
-          <TranscriptView ordered={ordered} byId={byId} showSlug={showSlug} />
+          <TranscriptView
+            ordered={ordered}
+            byId={byId}
+            showSlug={showSlug}
+            primaryRelation={ep?.relation ?? null}
+          />
         )}
       </div>
     </div>
@@ -204,22 +230,25 @@ function TranscriptView({
   ordered,
   byId,
   showSlug,
+  primaryRelation,
 }: {
   ordered: Node[]
   byId: Map<number, Node>
   showSlug: string
+  primaryRelation: 'live' | 'retro' | null
 }) {
   return (
     <>
       {ordered.map((node) => {
         const m = node.message
         const parent = m.parentId === null ? undefined : byId.get(m.parentId)
+        const tLabel = timingLabel(m.timing, primaryRelation)
         return (
           <article
             key={m.id}
             id={`m${m.id}`}
             className="grid gap-x-6 gap-y-2 border-b py-6 last:border-b-0 sm:grid-cols-[11rem_1fr]">
-            <div className="flex items-center gap-2 sm:block sm:text-right">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 sm:block sm:text-right">
               <span className="sm:mb-1.5 sm:ml-auto sm:block">
                 <Avatar name={m.poster.displayName} size={28} />
               </span>
@@ -236,6 +265,13 @@ function TranscriptView({
                   ↩ {parent.message.poster.displayName}
                 </a>
               )}
+              <SourceLine
+                compact
+                location={m.location}
+                additionalSourceCount={m.additionalSourceCount}
+                className="sm:block"
+              />
+              {tLabel && <span className="text-muted-foreground text-xs sm:block">{tLabel}</span>}
             </div>
             <div className="min-w-0">
               <MessageBody body={m.body} />
@@ -252,11 +288,13 @@ function TreeView({
   collapsed,
   toggle,
   showSlug,
+  primaryRelation,
 }: {
   roots: Node[]
   collapsed: Set<number>
   toggle: (id: number) => void
   showSlug: string
+  primaryRelation: 'live' | 'retro' | null
 }) {
   return (
     <>
@@ -268,6 +306,7 @@ function TreeView({
           collapsed={collapsed}
           toggle={toggle}
           showSlug={showSlug}
+          primaryRelation={primaryRelation}
         />
       ))}
     </>
@@ -280,15 +319,18 @@ function TreeNode({
   collapsed,
   toggle,
   showSlug,
+  primaryRelation,
 }: {
   node: Node
   depth: number
   collapsed: Set<number>
   toggle: (id: number) => void
   showSlug: string
+  primaryRelation: 'live' | 'retro' | null
 }) {
   const m = node.message
   const isCollapsed = collapsed.has(m.id)
+  const tLabel = timingLabel(m.timing, primaryRelation)
   return (
     <article id={`m${m.id}`} className="py-4">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -310,6 +352,12 @@ function TreeNode({
             {isCollapsed ? `+ ${plural(descendantCount(node), 'reply')}` : '− collapse'}
           </button>
         )}
+        <SourceLine
+          compact
+          location={m.location}
+          additionalSourceCount={m.additionalSourceCount}
+        />
+        {tLabel && <span className="text-muted-foreground text-xs">{tLabel}</span>}
       </div>
       <div className="mt-1.5 min-w-0">
         <MessageBody body={m.body} />
@@ -327,6 +375,7 @@ function TreeNode({
               collapsed={collapsed}
               toggle={toggle}
               showSlug={showSlug}
+              primaryRelation={primaryRelation}
             />
           ))}
         </div>

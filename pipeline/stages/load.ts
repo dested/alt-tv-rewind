@@ -17,6 +17,7 @@ import {
 } from '../lib/types'
 import { insertRows, inTransaction, type ColumnSpec } from '../lib/db'
 import { checkpointExists, readJsonl, writeJson } from '../lib/checkpoint'
+import { daysAfterAir, isLive } from '../lib/timing'
 
 const DAY_MS = 86_400_000
 
@@ -240,7 +241,7 @@ export const run: Stage['run'] = async (ctx) => {
       const res = await c.query(
         `INSERT INTO "archive" (show_id, newsgroup, source_file)
          VALUES ($1,$2,$3)
-         ON CONFLICT (newsgroup) DO UPDATE SET show_id=EXCLUDED.show_id, source_file=EXCLUDED.source_file, ingested_at=now()
+         ON CONFLICT (show_id, newsgroup) DO UPDATE SET source_file=EXCLUDED.source_file, ingested_at=now()
          RETURNING id`,
         [showId, ctx.show.newsgroup, basename(ctx.paths.archive)]
       )
@@ -475,7 +476,6 @@ export const run: Stage['run'] = async (ctx) => {
       const teRows: Record<string, unknown>[] = []
       const seen = new Set<string>()
       let unknownKeys = 0
-      const windowMs = ctx.show.liveWindowDays * DAY_MS
       const add = (
         threadId: number,
         startedAtMs: number,
@@ -493,8 +493,9 @@ export const run: Stage['run'] = async (ctx) => {
         if (seen.has(pair)) return
         seen.add(pair)
         const airMs = epAirMs.get(key)
+        // ET calendar days, per the day-resolution rule (decisions.md 2026-09-21).
         const relation =
-          airMs !== undefined && startedAtMs >= airMs - DAY_MS && startedAtMs <= airMs + windowMs
+          airMs !== undefined && isLive(daysAfterAir(airMs, startedAtMs), ctx.show.liveWindowDays)
             ? 'live'
             : 'retro'
         teRows.push({

@@ -3,6 +3,7 @@
 //   bun run pipeline ingest <slug> [--from <stage>] [--only <stage,stage>] [--force]
 //   bun run pipeline add-show <newsgroup> --name "<Show Name>" [--slug <slug>] [--tvmaze "<query>"] [--no-ingest]
 //   bun run pipeline download <newsgroup>
+//   bun run pipeline sources catalog|import|report … (see sources/cli.ts)
 //
 // Stages run in order (see STAGES); each reads the previous checkpoint under
 // data/work/<slug>/ and skips itself when its output exists unless --force.
@@ -22,6 +23,8 @@ const { positionals, values } = parseArgs({
     slug: { type: 'string' },
     tvmaze: { type: 'string' },
     'no-ingest': { type: 'boolean', default: false },
+    'dry-run': { type: 'boolean', default: false },
+    source: { type: 'string' },
   },
 })
 
@@ -83,8 +86,17 @@ async function main() {
       await downloadArchive(target)
       return
     }
+    case 'sources': {
+      const { runSources } = await import('./sources/cli')
+      await runSources(positionals.slice(1), {
+        'dry-run': values['dry-run'],
+        source: values.source,
+        force: values.force,
+      })
+      return
+    }
     default:
-      throw new Error(`unknown command "${command ?? ''}" — expected ingest | add-show | download`)
+      throw new Error(`unknown command "${command ?? ''}" — expected ingest | add-show | download | sources`)
   }
 }
 

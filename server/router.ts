@@ -4,6 +4,7 @@ import { episodesRouter } from './routers/episodes'
 import { threadsRouter } from './routers/threads'
 import { searchRouter } from './routers/search'
 import { postersRouter } from './routers/posters'
+import { sourcesRouter } from './routers/sources'
 import { adminRouter } from './routers/admin'
 
 export const appRouter = router({
@@ -13,6 +14,7 @@ export const appRouter = router({
   threads: threadsRouter,
   search: searchRouter,
   posters: postersRouter,
+  sources: sourcesRouter,
   admin: adminRouter,
 })
 
