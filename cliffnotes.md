@@ -20,6 +20,7 @@ Repo: https://github.com/dested/alt-tv-rewind · dev: http://localhost:7485
 - **Source catalog / import (research corpus):** `bun run pipeline sources catalog [--source a,b] [--dry-run]` → `bun run pipeline sources import <show> [--dry-run] [--force]` → `bun run pipeline sources report`. Reads `data/archives/research-2026-09-21/organized/` (gitignored), writes `data/work/sources/`. Idempotent; re-runs insert nothing. After a legacy `ingest --only load --force` of a show, re-run `sources import <show>` (the legacy reload drops that archive's threads, including imported messages that had joined them).
 - **Env (`.env`, gitignored):** `DATABASE_URL`, `BETTER_AUTH_URL=http://localhost:7485`, `BETTER_AUTH_SECRET`, `PORT=7485`, `ALLOW_SIGNUP=false`, `TYPESAFE_API_KEY` (classify), `ANTHROPIC_API_KEY` (enrich/recap). Keys are never printed or committed.
 - **Health:** `GET /healthz`.
+- **Traffic:** Crowsnest (https://cn.dested.com, site `tv-rewind.dested.com`). One `<script defer src="https://cn.dested.com/cn.js">` in `index.html` covers pageviews, referrers, clicks, engagement and vitals. Per episode: the Pages panel (`/seinfeld/s07e24-…`; filter `/seinfeld/*` for a show). Thread URLs don't name their episode, so `thread.tsx` sends a custom event `thread · /<show>/<episode>` (props: show, episode, relation, thread) through `src/lib/crowsnest.ts`; see the Custom panel. Silent on localhost. Never put identifying data in props, and never put "analytics" or "track" in a path.
 - **Server-only code lives in `./server/` and `./pipeline/`** — never import from `src/*` except `import type`.
 
 ## Directory structure
@@ -92,6 +93,7 @@ src/
 │   ├── taxonomy.ts          KIND / SENTIMENT / PREDICTION_OUTCOME glyph maps, EPISODE_FILTERS — the only place emoji live
 │   ├── usenet.ts (+test)    message parser: unwrap paragraphs, nested quotes + attribution, signature cut, redaction, stripRe, threadOrder, posterHue
 │   ├── api-types.ts         RouterOutputs / ThreadCard / EpisodeCard
+│   ├── crowsnest.ts         cnEvent(name, props): typed window.cn, retries until the deferred tag loads
 │   ├── snippet.ts · thread-tree.ts · trpc.tsx · auth-client.ts · utils.ts
 └── styles/app.css           the one paper theme (see ui.md): tokens, .post / .post-quote / .post-pre, mark; no dark mode
 prisma/schema.prisma + migrations/   see Data model

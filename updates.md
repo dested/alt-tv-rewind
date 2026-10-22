@@ -2,6 +2,12 @@
 
 > Terse, newest-first log: what was asked → what was done. One entry per finished task.
 
+## 2026-10-22 — Crowsnest traffic, per episode
+
+Ask: add Crowsnest analytics (per-episode too) and deploy, ahead of posting the site.
+Done: `cn.js` tag in `index.html` (pageviews, referrers/utm, clicks, engagement, vitals; per-episode via the Pages panel). Thread reads credited to their primary episode with a custom event `thread · /<show>/<episode>` from `thread.tsx` via `src/lib/crowsnest.ts` (typed `window.cn`, retries until the deferred tag loads). Share meta: title `alt.tv.rewind`, real description in place of the starter's. Verified: typecheck, SSR HTML carries the tag, bx client-nav check of the event payload.
+Touched: index.html, src/lib/crowsnest.ts, src/app/thread.tsx, cliffnotes.md.
+
 ## 2026-09-21 — Source integration: catalog, additive schema, resumable import, source-location UI
 
 Ask: execute plans/2026-09-21-fable-source-integration-handoff.md end to end (fable-opus mode): catalog the research corpus, integrate it with provenance, show where every post came from.

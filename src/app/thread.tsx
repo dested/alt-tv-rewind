@@ -1,4 +1,4 @@
-import { Fragment, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams, useRouteLoaderData, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTRPC } from '~/lib/trpc'
@@ -12,6 +12,7 @@ import { KIND, PREDICTION_OUTCOME, SENTIMENT } from '~/lib/taxonomy'
 import { episodeCode, formatDateTime, formatNumber, plural, relativeToAir } from '~/lib/format'
 import { stripRe, threadOrder } from '~/lib/usenet'
 import { cn } from '~/lib/utils'
+import { cnEvent } from '~/lib/crowsnest'
 import type { RootLoaderData } from './routes'
 
 // Deeper replies stop indenting but keep their reply order (see ui.md "Thread").
@@ -54,6 +55,23 @@ export function ThreadPage() {
   )
 
   const data = threadQuery.data
+
+  // Thread URLs don't name their episode, so credit the read to it here. The
+  // event name carries the episode's own path, so Crowsnest's Custom panel
+  // lines up with its Pages panel; one event per thread, not per view toggle.
+  const readKey = data ? `${data.thread.showSlug}/${data.thread.slug}` : null
+  useEffect(() => {
+    if (!data) return
+    const t = data.thread
+    const primary = t.episodes.find((e) => e.isPrimary) ?? null
+    cnEvent(primary ? `thread · /${t.showSlug}/${primary.slug}` : `thread · /${t.showSlug} (no episode)`, {
+      show: t.showSlug,
+      episode: primary?.slug ?? null,
+      relation: primary?.relation ?? null,
+      thread: t.slug,
+    })
+  }, [readKey])
+
   if (!data) return <p className="text-muted-foreground text-sm">Loading…</p>
 
   const { thread } = data
