@@ -5,14 +5,19 @@ import { episodeCode, formatAirDate, formatDate, plural } from '~/lib/format'
 // path writes it into <head> (entry-server → `<!--app-head-->`), and Layout
 // keeps document.title in step on client navigation.
 
-export type PageMeta = { title: string; description: string }
+// `image` is a site path to a 1200×630 card from `bun run og` (public/og/).
+export type PageMeta = { title: string; description: string; image: string }
 
 export const SITE = 'alt.tv.rewind'
+
+export const SITE_IMAGE = '/og/site.png'
+const showImage = (slug: string): string => `/og/${slug}.png`
 
 export const DEFAULT_META: PageMeta = {
   title: SITE,
   description:
     'What alt.tv.* Usenet said the morning after every episode aired — Seinfeld, The Simpsons, Friends and more, lined up against the original air dates.',
+  image: SITE_IMAGE,
 }
 
 export function isMetaData(data: unknown): data is { meta: PageMeta } {
@@ -24,7 +29,9 @@ export function isMetaData(data: unknown): data is { meta: PageMeta } {
     'title' in meta &&
     typeof meta.title === 'string' &&
     'description' in meta &&
-    typeof meta.description === 'string'
+    typeof meta.description === 'string' &&
+    'image' in meta &&
+    typeof meta.image === 'string'
   )
 }
 
@@ -50,6 +57,7 @@ export function showMeta(data: Show): PageMeta {
   return {
     title: titled(data.show.name),
     description: `What ${group} said about every episode of ${data.show.name}, the morning after it aired and in the years since.`,
+    image: showImage(data.show.slug),
   }
 }
 
@@ -57,6 +65,7 @@ export function seasonMeta(data: Show, season: number): PageMeta {
   return {
     title: titled(`${data.show.name} season ${season}`),
     description: `Every episode of ${data.show.name} season ${season}, ranked by how much ${data.archive?.newsgroup ?? 'Usenet'} had to say about it.`,
+    image: showImage(data.show.slug),
   }
 }
 
@@ -71,6 +80,7 @@ export function episodeMeta(data: Episode): PageMeta {
   return {
     title: titled(`“${ep.title}”`, `${data.show.name} ${code}`),
     description: clip(ep.recap ?? `${lead}${reaction}`),
+    image: showImage(data.show.slug),
   }
 }
 
@@ -83,19 +93,27 @@ export function threadMeta(thread: Thread): PageMeta {
   return {
     title: titled(thread.subject, thread.showName),
     description: clip(thread.pullQuote ? `“${thread.pullQuote}” — ${fallback}` : (thread.summary ?? fallback)),
+    image: showImage(thread.showSlug),
   }
 }
 
-export function simpleMeta(title: string, description: string): PageMeta {
-  return { title: titled(title), description: clip(description) }
+export function simpleMeta(title: string, description: string, showSlug?: string): PageMeta {
+  return {
+    title: titled(title),
+    description: clip(description),
+    image: showSlug ? showImage(showSlug) : SITE_IMAGE,
+  }
 }
 
 const ESCAPES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
 const escape = (s: string): string => s.replace(/[&<>"]/g, (c) => ESCAPES[c] ?? c)
 
-export function renderHead(meta: PageMeta): string {
+// `origin` is the public site URL; unfurlers need absolute image and page URLs.
+export function renderHead(meta: PageMeta, origin: string, pathname: string): string {
   const t = escape(meta.title)
   const d = escape(meta.description)
+  const base = origin.replace(/\/$/, '')
+  const image = escape(`${base}${meta.image}`)
   return [
     `<title>${t}</title>`,
     `<meta name="description" content="${d}" />`,
@@ -103,7 +121,12 @@ export function renderHead(meta: PageMeta): string {
     `<meta property="og:title" content="${t}" />`,
     `<meta property="og:description" content="${d}" />`,
     `<meta property="og:type" content="website" />`,
-    `<meta name="twitter:card" content="summary" />`,
+    `<meta property="og:url" content="${escape(`${base}${pathname}`)}" />`,
+    `<meta property="og:image" content="${image}" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:image" content="${image}" />`,
     `<meta name="twitter:title" content="${t}" />`,
     `<meta name="twitter:description" content="${d}" />`,
   ].join('\n    ')

@@ -1,3 +1,5 @@
+import fs from 'node:fs'
+import path from 'node:path'
 import type * as express from 'express'
 import { dehydrate, QueryClient, type DehydratedState } from '@tanstack/react-query'
 import { createTRPCClient, httpBatchLink } from '@trpc/client'
@@ -5,10 +7,24 @@ import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query'
 import ReactDomServer from 'react-dom/server'
 import { StaticRouterProvider, createStaticHandler, createStaticRouter } from 'react-router-dom'
 import { auth, type Session } from '../server/auth'
+import { env } from '../server/env'
 import { appRouter } from '../server/router'
 import App from './App'
 import { routes, type SsrLoaderContext } from './app/routes'
-import { DEFAULT_META, isMetaData, renderHead } from './lib/page-meta'
+import { DEFAULT_META, isMetaData, renderHead, SITE_IMAGE } from './lib/page-meta'
+
+// A show added after the last `bun run og` has no card yet; use the site one
+// rather than hand unfurlers a 404. Built output first, then the dev public dir.
+const STATIC_DIRS = [path.resolve('dist/client'), path.resolve('public')]
+const staticSeen = new Map<string, boolean>()
+function hasStatic(file: string): boolean {
+  let hit = staticSeen.get(file)
+  if (hit === undefined) {
+    hit = STATIC_DIRS.some((dir) => fs.existsSync(path.join(dir, file)))
+    staticSeen.set(file, hit)
+  }
+  return hit
+}
 
 export async function render(req: express.Request): Promise<{
   html: string
@@ -58,17 +74,19 @@ export async function render(req: express.Request): Promise<{
   )
 
   // The deepest matched route that returned `{ meta }` names the page.
-  const meta =
+  const found =
     routerContext.matches
       .map((m) => routerContext.loaderData[m.route.id])
       .filter(isMetaData)
       .at(-1)?.meta ?? DEFAULT_META
+  const meta = hasStatic(found.image) ? found : { ...found, image: SITE_IMAGE }
+  const pathname = new URL(fetchRequest.url).pathname
 
   // statusCode reflects loader-thrown Responses and unmatched-route 404s, so
   // the server returns the right HTTP status (not a blanket 200).
   return {
     html,
-    head: renderHead(meta),
+    head: renderHead(meta, env.BETTER_AUTH_URL, pathname),
     status: routerContext.statusCode,
     session,
     dehydratedState: dehydrate(queryClient),

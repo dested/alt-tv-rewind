@@ -15,6 +15,7 @@ Repo: https://github.com/dested/alt-tv-rewind · dev: http://localhost:7485
 - **Typecheck:** `bun run typecheck` (`tsgo --noEmit`) — a task is not done while it's red.
 - **Pipeline tests:** `bun test` (= `bun test pipeline`).
 - **DB:** Postgres `alt_tv_rewind`, **migrations only** (`bun run db:migrate` dev / `db:deploy` prod). `prisma db push` is forbidden — it cannot see the FTS trigger. Prisma refuses `migrate reset` under Claude Code; reset with `DROP SCHEMA public CASCADE; CREATE SCHEMA public;` via psql then `db:deploy`.
+- **Share cards:** `bun run og` renders `public/og/<slug>.png` per show + `public/og/site.png` (1200×630, paper theme, live DB numbers, Playwright) — committed. Re-run after adding a show or a big reload; until then that show's pages fall back to the site card.
 - **Add a show:** `bun run pipeline add-show alt.tv.frasier --name "Frasier" [--slug frasier] [--tvmaze "Frasier"] [--no-ingest]` — downloads the archive.org mbox, resolves TVMaze, registers in `data/shows.json`, runs the full ingest.
 - **Re-run stages:** `bun run pipeline ingest <slug> [--from <stage>] [--only a,b,c] [--force]`.
 - **Source catalog / import (research corpus):** `bun run pipeline sources catalog [--source a,b] [--dry-run]` → `bun run pipeline sources import <show> [--dry-run] [--force]` → `bun run pipeline sources report`. Reads `data/archives/research-2026-09-21/organized/` (gitignored), writes `data/work/sources/`. Idempotent; re-runs insert nothing. After a legacy `ingest --only load --force` of a show, re-run `sources import <show>` (the legacy reload drops that archive's threads, including imported messages that had joined them).
@@ -53,6 +54,7 @@ pipeline/                    offline ingest; every stage reads/writes JSONL chec
 │   ├── import-usenet.ts · projection.ts   conversations → thread/message; joins legacy threads by Message-ID; heuristic attribution (+ window-unique rule); classify/enrich checkpoints under data/work/sources/<show>/
 │   ├── import-forum.ts      native topics → threads; per-post timing; relation live if any post is
 │   └── report.ts            reconciled counts → data/work/sources/report.json
+├── og-images.ts             `bun run og`: share cards → public/og/ (Playwright screenshots of an HTML card)
 ├── add-show.ts · download.ts (archive.org usenet-alt/<group>.mbox.zip, yauzl)
 ├── lib/
 │   ├── types.ts             zod contracts for every checkpoint record + STAGES + StageContext
@@ -93,7 +95,7 @@ src/
 │   ├── taxonomy.ts          KIND / SENTIMENT / PREDICTION_OUTCOME glyph maps, EPISODE_FILTERS — the only place emoji live
 │   ├── usenet.ts (+test)    message parser: unwrap paragraphs, nested quotes + attribution, signature cut, redaction, stripRe, threadOrder, posterHue
 │   ├── api-types.ts         RouterOutputs / ThreadCard / EpisodeCard
-│   ├── page-meta.ts         per-page <title> + description/og/twitter tags: loaders return { meta }, entry-server renders the deepest into index.html's <!--app-head-->, Layout syncs document.title
+│   ├── page-meta.ts         per-page <title> + description/og/twitter tags + og:image (show card, else site card; absolute via BETTER_AUTH_URL): loaders return { meta }, entry-server renders the deepest into index.html's <!--app-head-->, Layout syncs document.title
 │   ├── crowsnest.ts         cnEvent(name, props): typed window.cn, retries until the deferred tag loads
 │   ├── snippet.ts · thread-tree.ts · trpc.tsx · auth-client.ts · utils.ts
 └── styles/app.css           the one paper theme (see ui.md): tokens, .post / .post-quote / .post-pre, mark; no dark mode

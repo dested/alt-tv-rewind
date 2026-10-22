@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bun --watch server.ts",
     "pipeline": "bun pipeline/cli.ts",
+    "og": "bun pipeline/og-images.ts",
     "test": "bun test pipeline src/lib",
     "build": "bun run clean && bun run build:client && bun run build:server",
     "build:client": "vite build --outDir dist/client",

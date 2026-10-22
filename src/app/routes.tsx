@@ -205,7 +205,8 @@ async function showSourcesLoader({ context, params }: LoaderFunctionArgs): Promi
   return {
     meta: simpleMeta(
       `${show.show.name} sources`,
-      `The newsgroups and forums behind the ${show.show.name} archive.`
+      `The newsgroups and forums behind the ${show.show.name} archive.`,
+      slug
     ),
   }
 }
@@ -243,7 +244,8 @@ async function searchLoader({ context, params, request }: LoaderFunctionArgs): P
   return {
     meta: simpleMeta(
       `Search ${show.show.name}`,
-      `Search everything ${show.archive?.newsgroup ?? 'Usenet'} ever said about ${show.show.name}.`
+      `Search everything ${show.archive?.newsgroup ?? 'Usenet'} ever said about ${show.show.name}.`,
+      slug
     ),
   }
 }
@@ -259,7 +261,8 @@ async function peopleLoader({ context, params }: LoaderFunctionArgs): Promise<Pa
   return {
     meta: simpleMeta(
       `${show.show.name} regulars`,
-      `The most prolific posters on ${show.archive?.newsgroup ?? 'Usenet'}, and the ones whose predictions came true.`
+      `The most prolific posters on ${show.archive?.newsgroup ?? 'Usenet'}, and the ones whose predictions came true.`,
+      slug
     ),
   }
 }
@@ -275,7 +278,8 @@ async function posterLoader({ context, params }: LoaderFunctionArgs): Promise<Pa
   return {
     meta: simpleMeta(
       `${poster.displayName} on ${show.show.name}`,
-      `Everything ${poster.displayName} posted about ${show.show.name}: ${plural(poster.messageCount, 'post')} across ${plural(poster.threadCount, 'thread')}.`
+      `Everything ${poster.displayName} posted about ${show.show.name}: ${plural(poster.messageCount, 'post')} across ${plural(poster.threadCount, 'thread')}.`,
+      slug
     ),
   }
 }

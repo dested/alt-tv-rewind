@@ -2,6 +2,12 @@
 
 > Terse, newest-first log: what was asked → what was done. One entry per finished task.
 
+## 2026-10-22 — Share cards (og:image) per show
+
+Ask: a branded preview image, per show.
+Done: `pipeline/og-images.ts` (`bun run og`) screenshots an HTML card per show (name, newsgroup, post count, year span, per-year volume bars in brand) plus a site card into `public/og/` (committed). `PageMeta.image`: show-scoped pages use their show's card, the rest the site card; `renderHead` emits absolute og:image/og:url (BETTER_AUTH_URL) and `summary_large_image`; entry-server falls back to the site card when a show's PNG is missing. Verified: typecheck, build (og/ in dist/client), curl heads on 4 routes, image served 200.
+Touched: pipeline/og-images.ts, public/og/*, package.json, src/lib/page-meta.ts, src/app/routes.tsx, src/entry-server.tsx, cliffnotes.md.
+
 ## 2026-10-22 — One `thread read` event, sliced by props
 
 Ask: let Crowsnest slice thread reads by show / episode / live-vs-retro.

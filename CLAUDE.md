@@ -28,7 +28,7 @@ alt.tv.rewind — a public archive of `alt.tv.*` Usenet newsgroups aligned to ep
 
 - New page → `src/app/<name>.tsx` + route + loader in `routes.tsx`. New procedure → the matching file in `server/routers/`, mounted in `server/router.ts`. New table/column → `prisma/schema.prisma` + `bun run db:migrate --name <slug>`.
 - New pipeline stage → `pipeline/stages/<name>.ts` exporting `run: Stage['run']`, record schema in `lib/types.ts`, name added to `STAGES` in order.
-- New show → `bun run pipeline add-show <newsgroup> --name "<Show>"`; curation in `data/shows/<slug>/aliases.json` and `phrases.json`.
+- New show → `bun run pipeline add-show <newsgroup> --name "<Show>"`; curation in `data/shows/<slug>/aliases.json` and `phrases.json`; then `bun run og` and commit its share card.
 - Working docs → `plans/YYYY-MM-DD-<slug>.md`, never a loose root `.md`.
 
 ## Verify
