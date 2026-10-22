@@ -2,6 +2,12 @@
 
 > Terse, newest-first log: what was asked → what was done. One entry per finished task.
 
+## 2026-10-22 — One `thread read` event, sliced by props
+
+Ask: let Crowsnest slice thread reads by show / episode / live-vs-retro.
+Done: Crowsnest gained a per-prop breakdown in the custom-event drawer (crowsnest 9e2ef0b), so `thread.tsx` now sends a single `thread read` event with show, episode (`<show>/<slug>`), relation and thread props instead of one event name per episode.
+Touched: src/app/thread.tsx, cliffnotes.md.
+
 ## 2026-10-22 — Per-page titles and share previews
 
 Ask: per-page titles/preview text before posting the site.

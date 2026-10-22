@@ -56,19 +56,20 @@ export function ThreadPage() {
 
   const data = threadQuery.data
 
-  // Thread URLs don't name their episode, so credit the read to it here. The
-  // event name carries the episode's own path, so Crowsnest's Custom panel
-  // lines up with its Pages panel; one event per thread, not per view toggle.
+  // Thread URLs don't name their episode, so credit the read to it here. One
+  // event name; Crowsnest's event drawer slices it by show / episode / relation.
+  // `episode` is the episode page's path minus the slash, so it lines up with
+  // the Pages panel. Once per thread, not per view toggle.
   const readKey = data ? `${data.thread.showSlug}/${data.thread.slug}` : null
   useEffect(() => {
     if (!data) return
     const t = data.thread
     const primary = t.episodes.find((e) => e.isPrimary) ?? null
-    cnEvent(primary ? `thread · /${t.showSlug}/${primary.slug}` : `thread · /${t.showSlug} (no episode)`, {
+    cnEvent('thread read', {
       show: t.showSlug,
-      episode: primary?.slug ?? null,
+      episode: primary ? `${t.showSlug}/${primary.slug}` : null,
       relation: primary?.relation ?? null,
-      thread: t.slug,
+      thread: `${t.showSlug}/thread/${t.slug}`,
     })
   }, [readKey])
 
