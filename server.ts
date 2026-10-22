@@ -119,10 +119,11 @@ async function createServer() {
         render = (await import('./dist/server/entry-server.js')).render
       }
 
-      const { html: appHtml, status, dehydratedState } = await render(req)
+      const { html: appHtml, head, status, dehydratedState } = await render(req)
 
       const stateScript = `<script>window.__SSR_STATE__ = ${jsonForScript({ dehydratedState })}</script>`
       const html = template
+        .replace('<!--app-head-->', head)
         .replace('<!--app-state-->', stateScript)
         .replace('<!--app-html-->', appHtml)
 

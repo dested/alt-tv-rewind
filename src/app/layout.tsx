@@ -4,14 +4,17 @@ import {
   NavLink,
   Outlet,
   ScrollRestoration,
+  useMatches,
   useNavigate,
   useParams,
   useRevalidator,
   useRouteLoaderData,
   useSearchParams,
 } from 'react-router-dom'
+import { useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { authClient } from '~/lib/auth-client'
+import { DEFAULT_META, isMetaData } from '~/lib/page-meta'
 import { cn } from '~/lib/utils'
 import type { RootLoaderData } from './routes'
 
@@ -25,6 +28,17 @@ export function Layout() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const revalidator = useRevalidator()
+
+  // SSR writes the <title> (entry-server); keep it in step on client navigation.
+  const matches = useMatches()
+  const title =
+    matches
+      .map((m) => m.data)
+      .filter(isMetaData)
+      .at(-1)?.meta.title ?? DEFAULT_META.title
+  useEffect(() => {
+    document.title = title
+  }, [title])
 
   async function signOut() {
     await authClient.signOut()

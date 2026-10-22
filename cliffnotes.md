@@ -93,6 +93,7 @@ src/
 │   ├── taxonomy.ts          KIND / SENTIMENT / PREDICTION_OUTCOME glyph maps, EPISODE_FILTERS — the only place emoji live
 │   ├── usenet.ts (+test)    message parser: unwrap paragraphs, nested quotes + attribution, signature cut, redaction, stripRe, threadOrder, posterHue
 │   ├── api-types.ts         RouterOutputs / ThreadCard / EpisodeCard
+│   ├── page-meta.ts         per-page <title> + description/og/twitter tags: loaders return { meta }, entry-server renders the deepest into index.html's <!--app-head-->, Layout syncs document.title
 │   ├── crowsnest.ts         cnEvent(name, props): typed window.cn, retries until the deferred tag loads
 │   ├── snippet.ts · thread-tree.ts · trpc.tsx · auth-client.ts · utils.ts
 └── styles/app.css           the one paper theme (see ui.md): tokens, .post / .post-quote / .post-pre, mark; no dark mode
@@ -117,6 +118,8 @@ e2e/                         Playwright smoke (stale — still the starter's sig
 | `/sources/:key`                       | one source: dispositions per show, captures, capsule documents                                                                                         | `sources.get`                          |
 | `/sources/:key/records/:recordId`     | preserved-record view (public sources only; 404 otherwise)                                                                                             | `sources.record`                       |
 | `/sign-in`                            | admin only                                                                                                                                             | better-auth                            |
+
+Every page loader returns `{ meta: PageMeta }` (`src/lib/page-meta.ts`) — that is the page's `<title>` and share preview; a new route without one falls back to the site default. index.html has no static `<title>`/og tags; the server fills `<!--app-head-->`.
 
 Episode slugs look like `s07e24-the-invitations`. Thread slugs are 12 hex chars of `sha256("<show>:<earliest Message-ID>")`, stable across reloads (DB ids are not — never link by id).
 

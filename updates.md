@@ -2,6 +2,12 @@
 
 > Terse, newest-first log: what was asked → what was done. One entry per finished task.
 
+## 2026-10-22 — Per-page titles and share previews
+
+Ask: per-page titles/preview text before posting the site.
+Done: `src/lib/page-meta.ts` (title, description, og/twitter tags); every page loader returns `{ meta }` (episode: “Title” — Show S07E24 + recap or reaction counts; thread: subject + pull quote/summary; show, season, people, poster, search, sources). `entry-server` renders the deepest match into `<!--app-head-->` (index.html's static title/og block removed); Layout syncs `document.title` on client nav. Verified: typecheck, build, curl heads on 9 routes incl. 404, bx client-nav title, one <title> in head.
+Touched: index.html, server.ts, src/entry-server.tsx, src/app/{routes,layout}.tsx, src/lib/page-meta.ts, cliffnotes.md.
+
 ## 2026-10-22 — Crowsnest traffic, per episode
 
 Ask: add Crowsnest analytics (per-episode too) and deploy, ahead of posting the site.

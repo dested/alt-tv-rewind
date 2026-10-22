@@ -8,9 +8,11 @@ import { auth, type Session } from '../server/auth'
 import { appRouter } from '../server/router'
 import App from './App'
 import { routes, type SsrLoaderContext } from './app/routes'
+import { DEFAULT_META, isMetaData, renderHead } from './lib/page-meta'
 
 export async function render(req: express.Request): Promise<{
   html: string
+  head: string
   status: number
   session: Session | null
   dehydratedState: DehydratedState
@@ -55,10 +57,18 @@ export async function render(req: express.Request): Promise<{
     </App>
   )
 
+  // The deepest matched route that returned `{ meta }` names the page.
+  const meta =
+    routerContext.matches
+      .map((m) => routerContext.loaderData[m.route.id])
+      .filter(isMetaData)
+      .at(-1)?.meta ?? DEFAULT_META
+
   // statusCode reflects loader-thrown Responses and unmatched-route 404s, so
   // the server returns the right HTTP status (not a blanket 200).
   return {
     html,
+    head: renderHead(meta),
     status: routerContext.statusCode,
     session,
     dehydratedState: dehydrate(queryClient),

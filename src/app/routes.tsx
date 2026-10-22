@@ -2,7 +2,17 @@ import { redirect, type LoaderFunctionArgs, type RouteObject } from 'react-route
 import type { QueryClient } from '@tanstack/react-query'
 import type { TRPCOptionsProxy } from '@trpc/tanstack-react-query'
 import { authClient } from '~/lib/auth-client'
+import { plural } from '~/lib/format'
 import { getBrowserClients } from '~/lib/trpc'
+import {
+  DEFAULT_META,
+  episodeMeta,
+  seasonMeta,
+  showMeta,
+  simpleMeta,
+  threadMeta,
+  type PageMeta,
+} from '~/lib/page-meta'
 import type { Session } from '../../server/auth'
 import type { AppRouter } from '../../server/router'
 import { EpisodePage } from './episode'
@@ -31,6 +41,9 @@ export type SsrLoaderContext = {
 }
 
 export type RootLoaderData = { session: Session | null }
+
+// Every page loader returns its <title> + share text (see src/lib/page-meta.ts).
+export type PageLoaderData = { meta: PageMeta }
 
 type Clients = { queryClient: QueryClient; trpc: TRPCOptionsProxy<AppRouter> }
 
@@ -109,35 +122,35 @@ async function redirectIfSignedIn({ context }: LoaderFunctionArgs) {
   return null
 }
 
-async function homeLoader({ context }: LoaderFunctionArgs) {
+async function homeLoader({ context }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   await ensure(queryClient.ensureQueryData(trpc.shows.list.queryOptions()))
-  return null
+  return { meta: DEFAULT_META }
 }
 
-async function showLoader({ context, params }: LoaderFunctionArgs) {
+async function showLoader({ context, params }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   const slug = param(params, 'show')
-  await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
+  const show = await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
   await Promise.all([
     queryClient.ensureQueryData(trpc.shows.timeline.queryOptions({ slug })),
     queryClient.ensureQueryData(trpc.shows.phrases.queryOptions({ slug })),
     queryClient.ensureQueryData(trpc.shows.thenVsNow.queryOptions({ slug })),
   ])
-  return null
+  return { meta: showMeta(show) }
 }
 
-async function seasonLoader({ context, params }: LoaderFunctionArgs) {
+async function seasonLoader({ context, params }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   const slug = param(params, 'show')
   const season = intParam(params, 'n')
   const show = await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
   if (!show.seasons.some((s) => s.number === season)) throw notFound()
   await queryClient.ensureQueryData(trpc.episodes.list.queryOptions({ slug, season }))
-  return null
+  return { meta: seasonMeta(show, season) }
 }
 
-async function episodeLoader({ context, params, request }: LoaderFunctionArgs) {
+async function episodeLoader({ context, params, request }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   const slug = param(params, 'show')
   const episode = param(params, 'episode')
@@ -150,52 +163,69 @@ async function episodeLoader({ context, params, request }: LoaderFunctionArgs) {
     queryClient.ensureQueryData(trpc.threads.byEpisode.queryOptions({ ...base, relation: 'live' })),
     queryClient.ensureQueryData(trpc.threads.byEpisode.queryOptions({ ...base, relation: 'retro' })),
   ])
-  return null
+  return { meta: episodeMeta(data) }
 }
 
-async function sourcesLoader({ context }: LoaderFunctionArgs) {
+async function sourcesLoader({ context }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   await ensure(queryClient.ensureQueryData(trpc.sources.list.queryOptions()))
-  return null
+  return {
+    meta: simpleMeta(
+      'Sources',
+      'Every newsgroup, forum and archive behind alt.tv.rewind, and the shows each one feeds.'
+    ),
+  }
 }
 
-async function sourceLoader({ context, params }: LoaderFunctionArgs) {
+async function sourceLoader({ context, params }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   const key = param(params, 'key')
-  await ensure(queryClient.ensureQueryData(trpc.sources.get.queryOptions({ key })))
-  return null
+  const source = await ensure(queryClient.ensureQueryData(trpc.sources.get.queryOptions({ key })))
+  return {
+    meta: simpleMeta(source.name, `Where ${source.name} comes from and which shows it feeds.`),
+  }
 }
 
-async function sourceRecordLoader({ context, params }: LoaderFunctionArgs) {
+async function sourceRecordLoader({ context, params }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   const key = param(params, 'key')
   const recordId = param(params, 'recordId')
-  await ensure(queryClient.ensureQueryData(trpc.sources.record.queryOptions({ key, recordId })))
-  return null
+  const record = await ensure(
+    queryClient.ensureQueryData(trpc.sources.record.queryOptions({ key, recordId }))
+  )
+  const label = record.title ?? `A post by ${record.authorName ?? 'an unknown poster'}`
+  return { meta: simpleMeta(label, `${label}, as preserved from ${record.source.name}.`) }
 }
 
-async function showSourcesLoader({ context, params }: LoaderFunctionArgs) {
+async function showSourcesLoader({ context, params }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   const slug = param(params, 'show')
-  await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
+  const show = await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
   await ensure(queryClient.ensureQueryData(trpc.sources.forShow.queryOptions({ slug })))
-  return null
+  return {
+    meta: simpleMeta(
+      `${show.show.name} sources`,
+      `The newsgroups and forums behind the ${show.show.name} archive.`
+    ),
+  }
 }
 
-async function threadLoader({ context, params }: LoaderFunctionArgs) {
+async function threadLoader({ context, params }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   const show = param(params, 'show')
   const slug = param(params, 'slug')
-  await ensure(queryClient.ensureQueryData(trpc.threads.get.queryOptions({ show, slug })))
-  return null
+  const data = await ensure(
+    queryClient.ensureQueryData(trpc.threads.get.queryOptions({ show, slug }))
+  )
+  return { meta: threadMeta(data.thread) }
 }
 
-async function searchLoader({ context, params, request }: LoaderFunctionArgs) {
+async function searchLoader({ context, params, request }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   const slug = param(params, 'show')
   const url = new URL(request.url)
   const q = url.searchParams.get('q')?.trim() ?? ''
-  await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
+  const show = await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
   if (q) {
     await queryClient.ensureQueryData(
       trpc.search.query.queryOptions({
@@ -210,27 +240,44 @@ async function searchLoader({ context, params, request }: LoaderFunctionArgs) {
       })
     )
   }
-  return null
+  return {
+    meta: simpleMeta(
+      `Search ${show.show.name}`,
+      `Search everything ${show.archive?.newsgroup ?? 'Usenet'} ever said about ${show.show.name}.`
+    ),
+  }
 }
 
-async function peopleLoader({ context, params }: LoaderFunctionArgs) {
+async function peopleLoader({ context, params }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   const slug = param(params, 'show')
-  await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
+  const show = await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
   await Promise.all([
     queryClient.ensureQueryData(trpc.posters.top.queryOptions({ slug })),
     queryClient.ensureQueryData(trpc.posters.prophets.queryOptions({ slug })),
   ])
-  return null
+  return {
+    meta: simpleMeta(
+      `${show.show.name} regulars`,
+      `The most prolific posters on ${show.archive?.newsgroup ?? 'Usenet'}, and the ones whose predictions came true.`
+    ),
+  }
 }
 
-async function posterLoader({ context, params }: LoaderFunctionArgs) {
+async function posterLoader({ context, params }: LoaderFunctionArgs): Promise<PageLoaderData> {
   const { queryClient, trpc } = clients(context)
   const slug = param(params, 'show')
   const id = intParam(params, 'id')
-  await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
-  await ensure(queryClient.ensureQueryData(trpc.posters.get.queryOptions({ id })))
-  return null
+  const show = await ensure(queryClient.ensureQueryData(trpc.shows.get.queryOptions({ slug })))
+  const { poster } = await ensure(
+    queryClient.ensureQueryData(trpc.posters.get.queryOptions({ id }))
+  )
+  return {
+    meta: simpleMeta(
+      `${poster.displayName} on ${show.show.name}`,
+      `Everything ${poster.displayName} posted about ${show.show.name}: ${plural(poster.messageCount, 'post')} across ${plural(poster.threadCount, 'thread')}.`
+    ),
+  }
 }
 
 export const routes: RouteObject[] = [
